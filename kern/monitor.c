@@ -21,9 +21,12 @@ struct Command {
 	int (*func)(int argc, char** argv, struct Trapframe* tf);
 };
 
+
 static struct Command commands[] = {
 	{ "help", "Display this list of commands", mon_help },
 	{ "kerninfo", "Display information about the kernel", mon_kerninfo },
+	{ "GKL", "this function from gkl", mon_gkl },
+	{ "backtrace", "Display ebp", mon_backtrace}
 };
 
 /***** Implementations of basic kernel monitor commands *****/
@@ -58,6 +61,44 @@ int
 mon_backtrace(int argc, char **argv, struct Trapframe *tf)
 {
 	// Your code here.
+	uint32_t ebp = read_ebp();
+	uint32_t eip;
+
+	struct Eipdebuginfo info;
+
+
+	cprintf("Stack backtrace:\n");
+	while (ebp != 0) {
+		// eip 存储了被调用函数的返回地址
+		eip = *((uint32_t*)ebp + 1); 
+		if( debuginfo_eip( eip, &info) == -1 ){
+			cprintf("read eip error!!\n");
+		}
+		cprintf("  ebp %08x  eip %08x  args", ebp, eip);
+		for (int i = 2; i < 7; i++) {
+			cprintf(" %08x", *(((uint32_t*)ebp) + i));
+		}
+		cprintf("\n");
+		cprintf("\t %s:%d: %s+%d \r\n",info.eip_file, info.eip_line, info.eip_fn_name, info.eip_fn_namelen);
+
+		ebp = *((uint32_t*)ebp);
+	}
+	return 0;
+}
+
+int
+mon_gkl(int argc, char **argv, struct Trapframe *tf)
+{
+	if( argc != 3 ){
+		cprintf("input num errors \n");
+	}
+	else{
+		int a = (char)*argv[1]-'0';
+		int b = (char)*argv[2]-'0';
+		int sum =  a + b;
+		cprintf(" %d + %d = %d \n", a, b, sum);
+	}
+
 	return 0;
 }
 
@@ -78,6 +119,7 @@ runcmd(char *buf, struct Trapframe *tf)
 	// Parse the command buffer into whitespace-separated arguments
 	argc = 0;
 	argv[argc] = 0;
+
 	while (1) {
 		// gobble whitespace
 		while (*buf && strchr(WHITESPACE, *buf))
@@ -112,8 +154,11 @@ monitor(struct Trapframe *tf)
 {
 	char *buf;
 
-	cprintf("Welcome to the JOS kernel monitor!\n");
+	cprintf("Welcome to the JOS kernel monitor! \n");
 	cprintf("Type 'help' for a list of commands.\n");
+	cprintf("www this info form GKL HHHH !!!");
+
+
 
 
 	while (1) {
