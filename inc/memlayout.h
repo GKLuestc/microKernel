@@ -12,6 +12,7 @@
  */
 
 // Global descriptor numbers
+//全局描述符编号
 #define GD_KT     0x08     // kernel text
 #define GD_KD     0x10     // kernel data
 #define GD_UT     0x18     // user text
@@ -89,13 +90,16 @@
 // At IOPHYSMEM (640K) there is a 384K hole for I/O.  From the kernel,
 // IOPHYSMEM can be addressed at KERNBASE + IOPHYSMEM.  The hole ends
 // at physical address EXTPHYSMEM.
+// IO设备的内存位置 0x0A_0000 - 0x10_0000  = 384 Kb
 #define IOPHYSMEM	0x0A0000
 #define EXTPHYSMEM	0x100000
 
-// Kernel stack.
+// Kernel stack. 内核栈的大小，为 8 个页面（每页 4KB）
+// PGSIZE = 4 KB
+// 内核堆栈
 #define KSTACKTOP	KERNBASE
-#define KSTKSIZE	(8*PGSIZE)   		// size of a kernel stack
-#define KSTKGAP		(8*PGSIZE)   		// size of a kernel stack guard
+#define KSTKSIZE	(8*PGSIZE)   		// size of a kernel stack（内核堆栈大小）
+#define KSTKGAP		(8*PGSIZE)   		// size of a kernel stack guard（内核堆栈保卫大小）
 
 // Memory-mapped IO.
 #define MMIOLIM		(KSTACKTOP - PTSIZE)

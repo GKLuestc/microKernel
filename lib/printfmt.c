@@ -88,7 +88,10 @@ vprintfmt(void (*putch)(int, void*), void *putdat, const char *fmt, va_list ap)
 	int base, lflag, width, precision, altflag;
 	char padc;
 
+	// 主逻辑
 	while (1) {
+
+		// 如果每遇到 ‘ % ’ 就一直打印字符
 		while ((ch = *(unsigned char *) fmt++) != '%') {
 			if (ch == '\0')
 				return;
@@ -96,11 +99,13 @@ vprintfmt(void (*putch)(int, void*), void *putdat, const char *fmt, va_list ap)
 		}
 
 		// Process a %-escape sequence
+		// 初始化一些变量用于处理格式化指令; 根据不同的格式化指令进行处理。
 		padc = ' ';
 		width = -1;
 		precision = -1;
 		lflag = 0;
 		altflag = 0;
+
 	reswitch:
 		switch (ch = *(unsigned char *) fmt++) {
 
@@ -206,10 +211,10 @@ vprintfmt(void (*putch)(int, void*), void *putdat, const char *fmt, va_list ap)
 		// (unsigned) octal
 		case 'o':
 			// Replace this with your code.
-			putch('X', putdat);
-			putch('X', putdat);
-			putch('X', putdat);
-			break;
+			// 设置基数，调用即可
+			num = getuint(&ap, lflag);
+			base = 8;
+			goto number;
 
 		// pointer
 		case 'p':
