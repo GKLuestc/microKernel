@@ -9,7 +9,7 @@
 #include <inc/memlayout.h>
 #include <inc/assert.h>
 
-// 标志了内核堆栈的物理位置，由entry.S决定
+// 标志了内核堆栈的物理位置，entry.S决定
 extern char bootstacktop[], bootstack[];
 
 extern struct PageInfo *pages;
