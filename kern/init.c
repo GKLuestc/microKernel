@@ -18,15 +18,18 @@ i386_init(void)
 	// Before doing anything else, complete the ELF loading process.
 	// Clear the uninitialized global data (BSS) section of our program.
 	// This ensures that all static/global variables start out zero.
+	// 完成ELF后续工作，将 .bss段的全局变量和静态变量清零
 	memset(edata, 0, end - edata);
 
 	// Initialize the console.
 	// Can't call cprintf until after we do this!
+	// 控制台初始化
 	cons_init();
 
 	cprintf("6828 decimal is %o octal!\n", 6828);
 
 	// Lab 2 memory management initialization functions
+	// 内存管理函数初始化
 	mem_init();
 
 	// Drop into the kernel monitor.

@@ -156,7 +156,7 @@ monitor(struct Trapframe *tf)
 
 	cprintf("Welcome to the JOS kernel monitor! \n");
 	cprintf("Type 'help' for a list of commands.\n");
-	cprintf("www this info form GKL HHHH !!!");
+	cprintf("www this info form GKL HHHH !!! \n");
 
 
 

@@ -102,6 +102,7 @@
 #define KSTKGAP		(8*PGSIZE)   		// size of a kernel stack guard（内核堆栈保卫大小）
 
 // Memory-mapped IO.
+// IO 孔
 #define MMIOLIM		(KSTACKTOP - PTSIZE)
 #define MMIOBASE	(MMIOLIM - PTSIZE)
 
@@ -176,6 +177,11 @@ extern volatile pde_t uvpd[];     // VA of current page directory
  * You can map a struct PageInfo * to the corresponding physical address
  * with page2pa() in kern/pmap.h.
  */
+/*
+* 页描述符结构，映射到 UPAGES。对内核读/写，对用户程序只读。每个结构体PageInfo存储一个物理页面的元数据。不
+* 是物理页本身，而是物理页和结构体PageInfo之间有一对一的对应关系。
+* 你可以映射一个结构体PageInfo到相应的物理地址,使用kern/pmap.h中的page2pa()。
+*/
 struct PageInfo {
 	// Next page on the free list.
 	struct PageInfo *pp_link;

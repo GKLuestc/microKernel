@@ -72,7 +72,10 @@ protcseg:
 spin:
   jmp spin
 
-# Bootstrap GDT
+# Bootstrap GDT 
+# x86原本是通过段选择器和段内偏移去管理内存,但是操作系统使用的是分页机制管理
+# 所以直接将x86的段基地址改成 0x0000_0000 - 0xffff_ffff, 相当于变相关闭了x86的段转换机制
+# 因为它对0-4GB的内存不会做改变
 .p2align 2                                # force 4 byte alignment
 gdt:
   SEG_NULL				# null seg
