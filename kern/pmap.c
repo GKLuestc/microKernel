@@ -165,8 +165,9 @@ mem_init(void)
 	// 一个页表目录 可以存储 1024 个页表，每个页表都代表4MB内存，一个页表目录能记录 1024 * 4MB = 4GB的内存空间
 	// 一个页表 可以存储 1024个内存起始点，每个起始点之间间隔4KB，一个页表能记录1024 * 4KB = 4MB的内存空间
 	kern_pgdir = (pde_t *) boot_alloc(PGSIZE);
+	cprintf("kern_pgdir = 0x%x \n", (uint32_t)kern_pgdir);
 	memset(kern_pgdir, 0, PGSIZE);
-
+	cprintf("kern_pgdir = 0x%x \n", (uint32_t)kern_pgdir);
 	//////////////////////////////////////////////////////////////////////
 	// Recursively insert PD in itself as a page table, to form
 	// a virtual page table at virtual address UVPT.
@@ -177,7 +178,7 @@ mem_init(void)
 	// 将 UVPT 所在的页目录项，置为存在，只读！！
 	// 将页目录本身放入 UVPT 的页目录项中，方便用户通过这个地址找到页目录，查看内容
 	kern_pgdir[PDX(UVPT)] = PADDR(kern_pgdir) | PTE_U | PTE_P;
-
+	cprintf("kern_pgdir[PDX(UVPT)] = 0x%x \n", kern_pgdir[PDX(UVPT)]);
 	//////////////////////////////////////////////////////////////////////
 	// Allocate an array of npages 'struct PageInfo's and store it in 'pages'.
 	// The kernel uses this array to keep track of physical pages: for
