@@ -1,0 +1,12 @@
+// {
+//     "files.associations": {
+//         "*.s": "c",
+//         "Makefrag": "makefile",
+//         "*.S": "cpp",
+//         "mmu.h": "c",
+//         "stdio.h": "c",
+//         "stdarg.h": "c",
+//         "types.h": "c",
+//         "kdebug.h": "c"
+//     }
+// }

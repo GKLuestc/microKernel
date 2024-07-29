@@ -5,27 +5,35 @@
 # where the GNUmakefile is located.
 #
 
+
+# 将boot目录添加到OBJDIRS变量中
 OBJDIRS += boot
 
+# 定义BOOT_OBJS变量，包含boot.o和main.o两个目标文件
 BOOT_OBJS := $(OBJDIR)/boot/boot.o $(OBJDIR)/boot/main.o
 
+# 规则：编译boot目录下的.c文件生成相应的.o文件
 $(OBJDIR)/boot/%.o: boot/%.c
 	@echo + cc -Os $<
 	@mkdir -p $(@D)
 	$(V)$(CC) -nostdinc $(KERN_CFLAGS) -Os -c -o $@ $<
 
+# 规则：汇编boot目录下的.S文件生成相应的.o文件
 $(OBJDIR)/boot/%.o: boot/%.S
 	@echo + as $<
 	@mkdir -p $(@D)
 	$(V)$(CC) -nostdinc $(KERN_CFLAGS) -c -o $@ $<
 
+# 特殊规则：编译boot/main.c生成main.o文件
 $(OBJDIR)/boot/main.o: boot/main.c
 	@echo + cc -Os $<
 	$(V)$(CC) -nostdinc $(KERN_CFLAGS) -Os -c -o $(OBJDIR)/boot/main.o boot/main.c
 
+
+# 规则：链接生成boot可执行文件
 $(OBJDIR)/boot/boot: $(BOOT_OBJS)
 	@echo + ld boot/boot
-	$(V)$(LD) $(LDFLAGS) -N -e start -Ttext 0x7C00 -o $@.out $^
+	$(V)$(LD) $(LDFLAGS) -N -e start -Ttext 0x7c00 -o $@.out $^
 	$(V)$(OBJDUMP) -S $@.out >$@.asm
 	$(V)$(OBJCOPY) -S -O binary -j .text $@.out $@
 	$(V)perl boot/sign.pl $(OBJDIR)/boot/boot
