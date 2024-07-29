@@ -30,12 +30,15 @@ typedef int32_t envid_t;
 #define ENVX(envid)		((envid) & (NENV - 1))
 
 // Values of env_status in struct Env
+// 						  运行态
+//						//   	 \
+//		新空间 ---> 就绪态  <---  阻塞态
 enum {
-	ENV_FREE = 0,
-	ENV_DYING,
-	ENV_RUNNABLE,
-	ENV_RUNNING,
-	ENV_NOT_RUNNABLE
+	ENV_FREE = 0,		//表示该进程（环境）当前未被使用，即该环境结构体处于空闲状态。
+	ENV_DYING,			//表示该进程正在终止，但还没有完全释放资源。
+	ENV_RUNNABLE,		//表示该进程是可运行的，即它可以被调度运行。
+	ENV_RUNNING,		//表示该进程正在运行中。
+	ENV_NOT_RUNNABLE	//表示该进程当前不可运行，即它处于阻塞状态。
 };
 
 // Special environment types
@@ -44,16 +47,16 @@ enum EnvType {
 };
 
 struct Env {
-	struct Trapframe env_tf;	// Saved registers
-	struct Env *env_link;		// Next free Env
-	envid_t env_id;			// Unique environment identifier
-	envid_t env_parent_id;		// env_id of this env's parent
-	enum EnvType env_type;		// Indicates special system environments
-	unsigned env_status;		// Status of the environment
-	uint32_t env_runs;		// Number of times environment has run
+	struct Trapframe env_tf;	// 在 inc/trap.h 中定义的这个结构体，在该环境不运行时保存该环境的寄存器值 Saved registers
+	struct Env *env_link;		// 这是一个指向 env_free_list 中的下一个 Env 的指针 Next free Env
+	envid_t env_id;				// 内核在这里存储一个值，该值唯一标识当前使用这个Env结构的环境 Unique environment identifier
+	envid_t env_parent_id;		// 内核在这里存储创建该环境的环境（类似于父进程）的env_id env_id of this env's parent
+	enum EnvType env_type;		// 这个是用来区分特殊环境的。大多数环境都是ENV_TYPE_USER类型。 Indicates special system environments
+	unsigned env_status;		// 当前环境的状态 Status of the environment
+	uint32_t env_runs;			// 记录运行的次数，可用于统计和调试 Number of times environment has run
 
 	// Address space
-	pde_t *env_pgdir;		// Kernel virtual address of page dir
+	pde_t *env_pgdir;	// 指向该环境的页目录，管理该环境的虚拟地址空间。Kernel virtual address of page dir
 };
 
 #endif // !JOS_INC_ENV_H

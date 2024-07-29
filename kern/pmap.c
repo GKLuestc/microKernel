@@ -64,7 +64,7 @@ i386_detect_memory(void)
 
 	cprintf("Physical memory: %uK available, base = %uK, extended = %uK\n",
 		totalmem, basemem, totalmem - basemem);
-	// cprintf("\nbasemem = %uK, extmem = %uK, ext16mem = %uK\n", basemem, extmem, ext16mem);
+	// cprintf("\n npages = %dK, npages_basemem = %dK \n", npages, npages_basemem);
 }
 
 
@@ -109,7 +109,9 @@ boot_alloc(uint32_t n)
 	// 所以使用ROUNDUP((char *) end, PGSIZE) 分配第一个4KB页面
 	if (!nextfree) {
 		extern char end[];
-		// cprintf("end addr =  0x%x \n", (uint32_t)end);
+		// extern char edata[];
+		// cprintf("edata addr =  0x%x \n", (uint32_t)edata);
+		// cprintf("end addr =  0x%x \n", (uint32_t)end);	
 		nextfree = ROUNDUP((char *) end, PGSIZE);
 		// cprintf("nextfree =  0x%x \n", (uint32_t)nextfree);
 	}
@@ -128,6 +130,8 @@ boot_alloc(uint32_t n)
 
 	// 当页面不足
 	// 即当前指针指向的地址，超过了物理内存的大小
+	cprintf("boot_alloc memory at %x, next memory allocate at %x\n", result, nextfree);
+
 	if( (uint32_t)nextfree > KERNBASE + npages * PGSIZE ) {
 		panic(" Out of Memory !!!");
 	}
@@ -161,25 +165,25 @@ mem_init(void)
 	//////////////////////////////////////////////////////////////////////
 	// create initial page directory.
 	// 创建页表目录， 并且清零初始化
-
 	// 32 位 = 10 ，10， 12
 	// 一个页表目录 可以存储 1024 个页表，每个页表都代表4MB内存，一个页表目录能记录 1024 * 4MB = 4GB的内存空间
 	// 一个页表 可以存储 1024个内存起始点，每个起始点之间间隔4KB，一个页表能记录1024 * 4KB = 4MB的内存空间
 	kern_pgdir = (pde_t *) boot_alloc(PGSIZE);
-	cprintf("kern_pgdir = 0x%x \n", (uint32_t)kern_pgdir);
 	memset(kern_pgdir, 0, PGSIZE);
-	cprintf("kern_pgdir = 0x%x \n", (uint32_t)kern_pgdir);
+
+
+
 	//////////////////////////////////////////////////////////////////////
 	// Recursively insert PD in itself as a page table, to form
 	// a virtual page table at virtual address UVPT.
 	// (For now, you don't have understand the greater purpose of the
 	// following line.)
-
 	// Permissions: kernel R, user R
 	// 将 UVPT 所在的页目录项，置为存在，只读！！
 	// 将页目录本身放入 UVPT 的页目录项中，方便用户通过这个地址找到页目录，查看内容
 	kern_pgdir[PDX(UVPT)] = PADDR(kern_pgdir) | PTE_U | PTE_P;
-	cprintf("kern_pgdir[PDX(UVPT)] = 0x%x \n", kern_pgdir[PDX(UVPT)]);
+
+
 	//////////////////////////////////////////////////////////////////////
 	// Allocate an array of npages 'struct PageInfo's and store it in 'pages'.
 	// The kernel uses this array to keep track of physical pages: for
@@ -187,19 +191,18 @@ mem_init(void)
 	// array.  'npages' is the number of physical pages in memory.  Use memset
 	// to initialize all fields of each struct PageInfo to 0.
 	// Your code goes here:
-		
 	// 物理内存是128MB，需要记录 128MB / 4KB = 32K 个内存起始点（页面），
 	// 一个页面由一个 PageInfo 结构体管理，需要32K个结构体
 	// 通过管理结构体，来标志这个页面的空闲状态，是系统最小的分配单位
 	pages = (struct PageInfo *) boot_alloc(npages * sizeof(struct PageInfo));
 	memset(pages, 0, npages * sizeof(struct PageInfo));
 
-	// cprintf("sizeof(struct PageInfo) = %d\n", sizeof(struct PageInfo));
-	// cprintf("pages addr = 0x%x\n", (uint32_t)pages);
 
 	//////////////////////////////////////////////////////////////////////
 	// Make 'envs' point to an array of size 'NENV' of 'struct Env'.
 	// LAB 3: Your code here.
+	envs = (struct Env *) boot_alloc(NENV * sizeof(struct Env));
+	memset(envs, 0, sizeof(struct Env) * NENV);
 
 	//////////////////////////////////////////////////////////////////////
 	// Now that we've allocated the initial kernel data structures, we set
@@ -207,12 +210,11 @@ mem_init(void)
 	// memory management will go through the page_* functions. In
 	// particular, we can now map memory using boot_map_region
 	// or page_insert
-	
 	// 将申请的页面管理，与内存起始点一一对应，pages[0] 对应 0x0000_0000，pages[1]对应 0x0000_1000 依次类推
 	// 并且将空闲的页面，串成一个空闲链表，链表头是 page_free_list
 	// 在设置完成之后，所有的内存操作都要使用 page 来管理，不能直接操作内存空间
 	page_init();
-
+	cprintf("page_free_list = 0x%x \n", (uint32_t)page_free_list);
 	// 检查链表头设置是否合理
 	check_page_free_list(1);
 
@@ -239,6 +241,7 @@ mem_init(void)
 	//    - the new image at UENVS  -- kernel R, user R
 	//    - envs itself -- kernel RW, user NONE
 	// LAB 3: Your code here.
+	boot_map_region(kern_pgdir, UENVS, PTSIZE, PADDR(envs), PTE_U | PTE_P);
 
 	//////////////////////////////////////////////////////////////////////
 	// Use the physical memory that 'bootstack' refers to as the kernel
@@ -324,8 +327,6 @@ page_init(void)
 	// NB: DO NOT actually touch the physical memory corresponding to
 	// free pages!
 	
-	// pages
-
 	// 注意，这是对物理内存的划分，都是使用物理地址来计算第几个页表
 	page_free_list = NULL;
 	int num_extmem_alloc = (PADDR(boot_alloc(0)) - EXTPHYSMEM) / PGSIZE;
@@ -333,6 +334,7 @@ page_init(void)
 
 
 	size_t i;
+	cprintf("npages = %d \n", npages);
 	for (i = 0; i < npages; i++) {
 
 		if( i == 0 ){

@@ -17,6 +17,8 @@ i386_init(void)
 {
 	extern char edata[], end[];
 
+	// cprintf("edata addr =  0x%x \n", (uint32_t)((char *)edata));
+	// cprintf("end addr =  0x%x \n", (uint32_t)((char *)end));	
 	// Before doing anything else, complete the ELF loading process.
 	// Clear the uninitialized global data (BSS) section of our program.
 	// This ensures that all static/global variables start out zero.
@@ -36,7 +38,10 @@ i386_init(void)
 
 	// Lab 3 user environment initialization functions
 	env_init();
-	trap_init();
+	trap_init();	// trap_init 函数的作用是初始化陷阱（trap）处理机制，以便操作系统能够正确处理各种陷阱和中断。
+					
+	
+
 
 #if defined(TEST)
 	// Don't touch -- used by grading script!

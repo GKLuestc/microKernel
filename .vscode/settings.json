@@ -1,4 +1,14 @@
-// {
+{
+    "files.associations": {
+        "*.s": "c",
+        "Makefrag": "makefile",
+        "*.S": "plaintext",
+        "monitor.h": "c",
+        "string.h": "c",
+        "mmu.h": "c",
+        "env.h": "c"
+    }
+} // {
 //     "files.associations": {
 //         "*.s": "c",
 //         "Makefrag": "makefile",
