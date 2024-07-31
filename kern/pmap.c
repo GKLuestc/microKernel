@@ -109,9 +109,9 @@ boot_alloc(uint32_t n)
 	// 所以使用ROUNDUP((char *) end, PGSIZE) 分配第一个4KB页面
 	if (!nextfree) {
 		extern char end[];
-		// extern char edata[];
-		// cprintf("edata addr =  0x%x \n", (uint32_t)edata);
-		// cprintf("end addr =  0x%x \n", (uint32_t)end);	
+		extern char edata[];
+		cprintf("edata addr =  0x%x \n", (uint32_t)edata);
+		cprintf("end addr =  0x%x \n", (uint32_t)end);	
 		nextfree = ROUNDUP((char *) end, PGSIZE);
 		// cprintf("nextfree =  0x%x \n", (uint32_t)nextfree);
 	}
@@ -132,9 +132,9 @@ boot_alloc(uint32_t n)
 	// 即当前指针指向的地址，超过了物理内存的大小
 	cprintf("boot_alloc memory at %x, next memory allocate at %x\n", result, nextfree);
 
-	if( (uint32_t)nextfree > KERNBASE + npages * PGSIZE ) {
-		panic(" Out of Memory !!!");
-	}
+	// if( (uint32_t)nextfree > KERNBASE + npages * PGSIZE ) {
+	// 	panic(" Out of Memory !!!");
+	// }
 
 	return result;
 }
@@ -169,6 +169,7 @@ mem_init(void)
 	// 一个页表目录 可以存储 1024 个页表，每个页表都代表4MB内存，一个页表目录能记录 1024 * 4MB = 4GB的内存空间
 	// 一个页表 可以存储 1024个内存起始点，每个起始点之间间隔4KB，一个页表能记录1024 * 4KB = 4MB的内存空间
 	kern_pgdir = (pde_t *) boot_alloc(PGSIZE);
+	// cprintf("&kern_pgdir = 0x%x /n", &kern_pgdir);
 	memset(kern_pgdir, 0, PGSIZE);
 
 
@@ -264,6 +265,9 @@ mem_init(void)
 	// we just set up the mapping anyway.
 	// Permissions: kernel RW, user NONE
 	// Your code goes here:
+	// 这只是建立了一种映射关系，没有涉及到具体的页面
+	// 将内核空间映射到全部内存，这样就可用在内核中操作所有物理内存
+	//  想访问 0x0000_0001的物理内存，只需要访问 0xf000_0001的虚拟地址即可
 	boot_map_region(kern_pgdir, KERNBASE, 0xffffffff-KERNBASE, 0, PTE_W);
 
 
@@ -690,7 +694,18 @@ int
 user_mem_check(struct Env *env, const void *va, size_t len, int perm)
 {
 	// LAB 3: Your code here.
+	cprintf("user_mem_check va: %x, len: %x\n", va, len);
+	uint32_t begin = (uint32_t)ROUNDDOWN(va, PGSIZE);
+	uint32_t end = (uint32_t)ROUNDUP(va+len, PGSIZE);
+	for(uint32_t i = begin; i < end; i += PGSIZE){
+		pte_t *pte = pgdir_walk(env->env_pgdir, (void*)i, 0);
+		if( !pte || i >= ULIM || !(*pte & PTE_P) || ((*pte & perm) != perm) ){
+			user_mem_check_addr = (i < (uint32_t)va ? (uint32_t)va : i);
+			return -E_FAULT;
+		}
+	}
 
+	cprintf("user_mem_check success va: %x, len: %x\n", va, len);
 	return 0;
 }
 

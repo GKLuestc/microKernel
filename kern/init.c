@@ -33,14 +33,20 @@ i386_init(void)
 	cprintf("6828 decimal is %o octal!\n", 6828);
 
 	// Lab 2 memory management initialization functions
-	// 内存管理函数初始化
+	// 根据mmu.h初始化内存结构，建立映射关系
+	// 设置cr0 和 cr3 启动分页机制
 	mem_init();
 
 	// Lab 3 user environment initialization functions
+	// 初始化环境链表，初步初始化GDT全局描述符，设置段的权限，预留TSS段
 	env_init();
-	trap_init();	// trap_init 函数的作用是初始化陷阱（trap）处理机制，以便操作系统能够正确处理各种陷阱和中断。
+
+	// trap_init 函数的作用是初始化陷阱（trap）处理机制，以便操作系统能够正确处理各种陷阱和中断。
+	// 初始化中断 IDT表，
+	// 设置cpu的 TSS 段和 IDT 表
+	trap_init();	
 					
-	
+	cprintf("***************** System Init Over!! *****************\n\n");
 
 
 #if defined(TEST)
@@ -48,10 +54,15 @@ i386_init(void)
 	ENV_CREATE(TEST, ENV_TYPE_USER);
 #else
 	// Touch all you want.
+	// 设置用户链接名称 “_binary_obj_ + user_hello + _start”
+	// 申请一个空用户，加载用户程序的ELF程序
+	// 设置用户结构体的寄存器数据
 	ENV_CREATE(user_hello, ENV_TYPE_USER);
 #endif // TEST*
 
 	// We only have one user environment for now, so just run it.
+	// 切换到某个用户环境
+	// 1、切换页目录；2、切用户环境的寄存器(切换cpu执行权)
 	env_run(&envs[0]);
 }
 

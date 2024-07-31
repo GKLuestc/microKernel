@@ -61,15 +61,29 @@ mon_kerninfo(int argc, char **argv, struct Trapframe *tf)
 int
 mon_backtrace(int argc, char **argv, struct Trapframe *tf)
 {
+	if(argc >= 3){
+		cprintf("more input!!! use like \" backtrace 12 \"\n");
+	}
+
 	// Your code here.
 	uint32_t ebp = read_ebp();
 	uint32_t eip;
+
+	uint32_t num = 0;	
+	if(argc == 2){
+		char* s = argv[1];
+		cprintf("input = \"%s\"\n", s);
+		for(int i = 0; s[i] != '\0'; i++){
+			num  =  num *10 + (s[i]-'0');
+		}
+	}
+
 
 	struct Eipdebuginfo info;
 
 
 	cprintf("Stack backtrace:\n");
-	while (ebp != 0) {
+	while (num-- && ebp != 0) {
 		// eip 存储了被调用函数的返回地址
 		eip = *((uint32_t*)ebp + 1); 
 		if( debuginfo_eip( eip, &info) == -1 ){

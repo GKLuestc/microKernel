@@ -13,11 +13,11 @@
 
 // Global descriptor numbers
 //全局描述符编号
-#define GD_KT     0x08     // kernel text
-#define GD_KD     0x10     // kernel data
-#define GD_UT     0x18     // user text
-#define GD_UD     0x20     // user data
-#define GD_TSS0   0x28     // Task segment selector for CPU 0
+#define GD_KT     0x08     // kernel text 内核代码段 通常在进入内核模式时加载到 cs 寄存器
+#define GD_KD     0x10     // kernel data 内核数据段 通常在进入内核模式时加载到 ds, es, fs, gs, ss 寄存器
+#define GD_UT     0x18     // user text 用户代码段
+#define GD_UD     0x20     // user data 用户数据段
+#define GD_TSS0   0x28     // Task segment selector for CPU 0 任务状态段（TSS）
 
 /*
  * Virtual memory map:                                Permissions

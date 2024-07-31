@@ -33,7 +33,8 @@ static struct Env *env_free_list;	// Free environment list
 // In particular, the last argument to the SEG macro used in the
 // definition of gdt specifies the Descriptor Privilege Level (DPL)
 // of that descriptor: 0 for kernel and 3 for user.
-//
+// 
+// 虽然不用段来描述内存的映射关系，但是需要用到段的权限管理机制
 struct Segdesc gdt[] =
 {
 	// 0x0 - unused (always faults -- for trapping NULL far pointers)
@@ -52,6 +53,7 @@ struct Segdesc gdt[] =
 	[GD_UD >> 3] = SEG(STA_W, 0x0, 0xffffffff, 3),
 
 	// 0x28 - tss, initialized in trap_init_percpu()
+	// 为 TSS 预留空间，在trap_init_percpu()中完成初始化
 	[GD_TSS0 >> 3] = SEG_NULL
 };
 
@@ -59,7 +61,7 @@ struct Pseudodesc gdt_pd = {
 	sizeof(gdt) - 1, (unsigned long) gdt
 };
 
-//
+// 将环境的id转为环境指针
 // Converts an envid to an env pointer.
 // If checkperm is set, the specified environment must be either the
 // current environment or an immediate child of the current environment.
@@ -116,7 +118,9 @@ env_init(void)
 {
 	// Set up envs array
 	// LAB 3: Your code here.
+	// 空闲环节列表，从小到大排序
 	env_free_list = NULL;
+
 	for(int i = NENV-1; i >= 0; i--){		//前插法
 		envs[i].env_id = 0;
 		envs->env_link = env_free_list;
@@ -124,9 +128,11 @@ env_init(void)
 	}
 
 	// Per-CPU part of the initialization
+	// 初始化cpu部分 
 	env_init_percpu();
 }
 
+// 加载 GDT 和 段描述符
 // Load GDT and segment descriptors.
 void
 env_init_percpu(void)
@@ -148,7 +154,7 @@ env_init_percpu(void)
 	lldt(0);
 }
 
-// 为新用户申请一个页目录
+// 为新用户申请一个页目录，页目录相当于记录了这个用户所有的信息位置
 // Initialize the kernel virtual memory layout for environment e.
 // Allocate a page directory, set e->env_pgdir accordingly,
 // and initialize the kernel portion of the new environment's address space.
@@ -197,7 +203,7 @@ env_setup_vm(struct Env *e)
 	return 0;
 }
 
-//
+// 申请一个新环境，放在newenv_store中
 // Allocates and initializes a new environment.
 // On success, the new environment is stored in *newenv_store.
 //
@@ -245,11 +251,11 @@ env_alloc(struct Env **newenv_store, envid_t parent_id)
 	// we switch privilege levels, the hardware does various
 	// checks involving the RPL and the Descriptor Privilege Level
 	// (DPL) stored in the descriptors themselves.
+	e->env_tf.tf_cs = GD_UT | 3;	
 	e->env_tf.tf_ds = GD_UD | 3;
 	e->env_tf.tf_es = GD_UD | 3;
 	e->env_tf.tf_ss = GD_UD | 3;
 	e->env_tf.tf_esp = USTACKTOP;
-	e->env_tf.tf_cs = GD_UT | 3;
 	// You will set e->env_tf.tf_eip later.
 
 	// commit the allocation
@@ -260,7 +266,7 @@ env_alloc(struct Env **newenv_store, envid_t parent_id)
 	return 0;
 }
 
-//为用户 e 分配 va+len 的空间
+//为用户 e 分配 va + len 的空间，循环申请页面满足
 // Allocate len bytes of physical memory for environment env,
 // and map it at virtual address va in the environment's address space.
 // Does not zero or otherwise initialize the mapped pages in any way.
@@ -281,7 +287,7 @@ region_alloc(struct Env *e, void *va, size_t len)
 		struct PageInfo* pp = page_alloc(0);
 		if(pp == NULL)
 			panic("region_alloc failed\n");
-		page_insert(e->env_pgdir, pp, begin, PTE_W | PTE_U); // 映射
+		page_insert(e->env_pgdir, pp, begin, PTE_W | PTE_U); // 映射页面
 		begin += PGSIZE;
 	}
 
