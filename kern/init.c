@@ -73,7 +73,10 @@ i386_init(void)
  */
 const char *panicstr;
 
+
+
 /*
+ * 当程序错误，打印file，直接启动 monitor 函数
  * Panic is called on unresolvable fatal errors.
  * It prints "panic: mesg", and then enters the kernel monitor.
  */

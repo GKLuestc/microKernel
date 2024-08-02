@@ -191,6 +191,7 @@ trap_dispatch(struct Trapframe *tf)
 		return ;
 	}
 
+	// 断点中断，以当前 tf 执行一次monitor
 	if (tf->tf_trapno == T_BRKPT) {
 		monitor(tf);
 		return;

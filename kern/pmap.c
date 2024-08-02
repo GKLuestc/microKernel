@@ -674,7 +674,7 @@ tlb_invalidate(pde_t *pgdir, void *va)
 
 static uintptr_t user_mem_check_addr;
 
-//
+//检查一个环境，释放能够对虚拟空间有操作权限
 // Check that an environment is allowed to access the range of memory
 // [va, va+len) with permissions 'perm | PTE_P'.
 // Normally 'perm' will contain PTE_U at least, but this is not required.
@@ -699,6 +699,7 @@ user_mem_check(struct Env *env, const void *va, size_t len, int perm)
 	cprintf("user_mem_check va: %x, len: %x\n", va, len);
 	uint32_t begin = (uint32_t)ROUNDDOWN(va, PGSIZE);
 	uint32_t end = (uint32_t)ROUNDUP(va+len, PGSIZE);
+
 	for(uint32_t i = begin; i < end; i += PGSIZE){
 		pte_t *pte = pgdir_walk(env->env_pgdir, (void*)i, 0);
 		if( !pte || i >= ULIM || !(*pte & PTE_P) || ((*pte & perm) != perm) ){
@@ -711,7 +712,7 @@ user_mem_check(struct Env *env, const void *va, size_t len, int perm)
 	return 0;
 }
 
-//
+// 使用user_mem_check断言一个环境是否有权操作va，va+len的空间，没有就直接销毁环境
 // Checks that environment 'env' is allowed to access the range
 // of memory [va, va+len) with permissions 'perm | PTE_U | PTE_P'.
 // If it can, then the function simply returns.
