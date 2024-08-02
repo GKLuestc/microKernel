@@ -10,7 +10,7 @@
 typedef int32_t envid_t;
 
 // An environment ID 'envid_t' has three parts:
-//
+//	环境的 id 由以下三部分组成
 // +1+---------------21-----------------+--------10--------+
 // |0|          Uniqueifier             |   Environment    |
 // | |                                  |      Index       |
@@ -26,8 +26,8 @@ typedef int32_t envid_t;
 // stands for the current environment.
 
 #define LOG2NENV		10
-#define NENV			(1 << LOG2NENV)
-#define ENVX(envid)		((envid) & (NENV - 1))
+#define NENV			(1 << LOG2NENV)		// 总共的环境数量，1024个环境
+#define ENVX(envid)		((envid) & (NENV - 1))  // 环境 id 的低10位表示在 env数组中的位置
 
 // Values of env_status in struct Env
 // 						  运行态

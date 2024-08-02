@@ -14,6 +14,7 @@
 	.set uvpd, (UVPT+(UVPT>>12)*4)
 
 
+// 所有运行环境的起始程序，跳转到libmain程序
 // Entrypoint - this is where the kernel (or our parent environment)
 // starts us running when we are initially loaded into a new environment.
 .text

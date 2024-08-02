@@ -12,9 +12,9 @@
 #include <kern/trap.h>
 #include <kern/monitor.h>
 
-struct Env *envs = NULL;		// All environments
-struct Env *curenv = NULL;		// The current env
-static struct Env *env_free_list;	// Free environment list
+struct Env *envs = NULL;		// 指向一片内存，包含了所有的环境 All environments
+struct Env *curenv = NULL;		// 指向当前的工作环境 The current env
+static struct Env *env_free_list;	// 指向了一个空闲环境链表 Free environment list
 					// (linked by Env->env_link)
 
 #define ENVGENSHIFT	12		// >= LOGNENV
@@ -386,13 +386,14 @@ load_icode(struct Env *e, uint8_t *binary)
 
 	lcr3(PADDR(kern_pgdir));
 
-	// e->env_tf.tf_eip 中保存程序的第一条指令
+	// e->env_tf.tf_eip 中保存程序的第一条指令，记录程序入口
 	e->env_tf.tf_eip = ELFHDR->e_entry;
 
 	// Now map one page for the program's initial stack
 	// at virtual address USTACKTOP - PGSIZE.
 
 	// LAB 3: Your code here.
+	// 为当前环境申请一个页面的栈区
 	region_alloc(e, (void *) (USTACKTOP - PGSIZE), PGSIZE);
 }
 
@@ -408,12 +409,14 @@ env_create(uint8_t *binary, enum EnvType type)
 {
 	// LAB 3: Your code here.
 	struct Env *env;
-
-
+	
+	// 申请一个空闲环境，父进程设置为 0 
 	if( env_alloc(&env, 0) != 0){
 		panic("env_create fault \n");
 	}
 
+	// 从 binary 这个二进制用户程序起始地址，加载 ELF 到内存中
+	// 设置 用户程序入口，申请一个页面当作栈区（能够满足轻量程序需求）
 	load_icode(env,binary);
 	env->env_type = type;
 }
@@ -471,7 +474,7 @@ env_free(struct Env *e)
 	env_free_list = e;
 }
 
-//
+// 释放用户环境，并且启动 monitor 监控程序
 // Frees environment e.
 //
 void
@@ -505,7 +508,7 @@ env_pop_tf(struct Trapframe *tf)
 	panic("iret failed");  /* mostly to placate the compiler */
 }
 
-//
+// 运行当前环境 e
 // Context switch from curenv to env e.
 // Note: if this is the first call to env_run, curenv is NULL.
 //
@@ -543,6 +546,8 @@ env_run(struct Env *e)
 	e->env_status = ENV_RUNNING;
 	e->env_runs++;
 	lcr3(PADDR(e->env_pgdir));    //切换当前用户的页目录，加载线性地址空间
+
+	// 切换 cpu 寄存器，相当于将cpu的执行权交给用户程序
 	env_pop_tf(&e->env_tf);       //将当前用户的寄存器实现
 }
 

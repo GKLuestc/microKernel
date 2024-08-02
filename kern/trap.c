@@ -185,6 +185,7 @@ trap_dispatch(struct Trapframe *tf)
 {
 	// Handle processor exceptions.
 	// LAB 3: Your code here.
+	// 14号缺页中断
 	if( tf->tf_trapno == T_PGFLT ){
 		page_fault_handler(tf);
 		return ;
@@ -197,8 +198,9 @@ trap_dispatch(struct Trapframe *tf)
 
 	// 如果是系统调用，按照前文说的规则，从寄存器中取出系统调用号和五个参数，
 	// 传给 kern/syscall.c中的 syscall()
-	// 并将返回值保存到 EAX, syscall就返回EAX的值就可以
 	if (tf->tf_trapno == T_SYSCALL) { 
+
+		// 并将返回值保存到 EAX, syscall就返回EAX的值就可以
 		tf->tf_regs.reg_eax = syscall(tf->tf_regs.reg_eax, tf->tf_regs.reg_edx, 
 									  tf->tf_regs.reg_ecx, tf->tf_regs.reg_ebx, 
 									  tf->tf_regs.reg_edi, tf->tf_regs.reg_esi);
@@ -253,9 +255,11 @@ trap(struct Trapframe *tf)
 	last_tf = tf;
 
 	// Dispatch based on what type of trap occurred
+	// 根据发起中断的环境 tf，执行不同操作
 	trap_dispatch(tf);
 
 	// Return to the current environment, which should be running.
+	// 执行完中断程序，直接 env_run 发起中断的环境。恢复环境堆栈，返回中断点，并且用eax寄存器作为中断返回值
 	assert(curenv && curenv->env_status == ENV_RUNNING);
 	env_run(curenv);
 }
@@ -272,7 +276,9 @@ page_fault_handler(struct Trapframe *tf)
 	// Handle kernel-mode page faults.
 
 	// LAB 3: Your code here.
-
+	if ((tf->tf_cs & 3) == 0) //内核态发生缺页中断直接panic
+		panic("page_fault_handler():page fault in kernel mode!\n");
+		
 	// We've already handled kernel-mode exceptions, so if we get here,
 	// the page fault happened in user mode.
 

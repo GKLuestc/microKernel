@@ -202,6 +202,7 @@ mem_init(void)
 	//////////////////////////////////////////////////////////////////////
 	// Make 'envs' point to an array of size 'NENV' of 'struct Env'.
 	// LAB 3: Your code here.
+	// envs定义在env.c文件中，这里为其申请 NENV 个 Env 结构体的空间，用于管理环境（类似于页面的管理方式）
 	envs = (struct Env *) boot_alloc(NENV * sizeof(struct Env));
 	memset(envs, 0, sizeof(struct Env) * NENV);
 
@@ -242,6 +243,7 @@ mem_init(void)
 	//    - the new image at UENVS  -- kernel R, user R
 	//    - envs itself -- kernel RW, user NONE
 	// LAB 3: Your code here.
+	// 将 envs 的物理空间与逻辑空间相映射
 	boot_map_region(kern_pgdir, UENVS, PTSIZE, PADDR(envs), PTE_U | PTE_P);
 
 	//////////////////////////////////////////////////////////////////////

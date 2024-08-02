@@ -59,8 +59,8 @@
 	TRAPHANDLER(th10, 10)
 	TRAPHANDLER(th11, 11)
 	TRAPHANDLER(th12, 12)
-	TRAPHANDLER(th13, 13)
-	TRAPHANDLER(th14, 14)
+	TRAPHANDLER(th13, 13)	// 一般保护故障（当用户权限主动发起缺页中断，会被转到13号一般中断上）
+	TRAPHANDLER(th14, 14)	// 缺页中断，只能由内核权限发起
 	TRAPHANDLER_NOEC(th16, 16)
 
 	TRAPHANDLER_NOEC(th_syscall, T_SYSCALL)
@@ -81,3 +81,5 @@
     popl %es          // 加载内核数据段到 ES
     pushl %esp        // 压入当前栈指针（指向 Trapframe 结构的起始地址）
     call trap         // 调用 C 函数 trap()
+
+	//调用call trap之后，不会从这里ret返回，而是在trap函数中，直接根据发起中断的用户环境设置cpu，实现返回
