@@ -21,16 +21,6 @@ static void boot_aps(void);
 void
 i386_init(void)
 {
-	extern char edata[], end[];
-
-	// cprintf("edata addr =  0x%x \n", (uint32_t)((char *)edata));
-	// cprintf("end addr =  0x%x \n", (uint32_t)((char *)end));	
-	// Before doing anything else, complete the ELF loading process.
-	// Clear the uninitialized global data (BSS) section of our program.
-	// This ensures that all static/global variables start out zero.
-	// 完成ELF后续工作，将 .bss段的全局变量和静态变量清零
-	memset(edata, 0, end - edata);
-
 	// Initialize the console.
 	// Can't call cprintf until after we do this!
 	// 控制台初始化
@@ -52,7 +42,7 @@ i386_init(void)
 	// 设置cpu的 TSS 段和 IDT 表
 	trap_init();	
 					
-	cprintf("***************** System Init Over!! *****************\n\n");
+
 
 
 	// Lab 4 multiprocessor initialization functions
@@ -67,7 +57,8 @@ i386_init(void)
 
 	// Starting non-boot CPUs
 	boot_aps();
-
+	cprintf("***************** System Init Over!! *****************\n\n");
+	
 #if defined(TEST)
 	// Don't touch -- used by grading script!
 	ENV_CREATE(TEST, ENV_TYPE_USER);
