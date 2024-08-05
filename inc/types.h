@@ -24,6 +24,8 @@ typedef unsigned long long uint64_t;
 // uintptr_t to represent the numerical values of virtual addresses,
 // and physaddr_t to represent physical addresses.
 typedef int32_t intptr_t;
+
+// 虚拟地址或物理地址
 typedef uint32_t uintptr_t;
 typedef uint32_t physaddr_t;
 

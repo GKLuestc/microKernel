@@ -14,6 +14,11 @@ static void cons_intr(int (*proc)(void));
 static void cons_putc(int c);
 
 // Stupid I/O delay routine necessitated by historical PC design flaws
+/*
+在早期的 PC 设计中，某些硬件操作需要一定的时间间隔来完成，比如对 I/O 设备的访问。
+为了确保这些操作能够正常完成，程序需要引入延迟。然而，早期的 PC 硬件没有提供统一的高精度延迟机制，
+因此程序员不得不使用一些“愚蠢”的方法来引入延迟。
+*/
 static void
 delay(void)
 {
@@ -194,6 +199,8 @@ cga_putc(int c)
 	}
 
 	// What is the purpose of this?
+	// 当显存超过显示，将显存整体向上移动一行
+	// 将最新的一行清空
 	if (crt_pos >= CRT_SIZE) {
 		int i;
 
@@ -437,9 +444,9 @@ cons_getc(void)
 static void
 cons_putc(int c)
 {
-	serial_putc(c);
-	lpt_putc(c);
-	cga_putc(c);
+	serial_putc(c); //该函数负责将字符输出到串行端口（COM1）
+	lpt_putc(c);	//该函数负责将字符输出到并行端口（通常用于连接打印机）。
+	cga_putc(c);	//该函数负责将字符输出到文本模式的 CGA/VGA 显示器。
 }
 
 // initialize the console devices

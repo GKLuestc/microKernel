@@ -1,0 +1,28 @@
+{
+    "files.associations": {
+        "*.s": "c",
+        "Makefrag": "makefile",
+        "*.S": "plaintext",
+        "monitor.h": "c",
+        "string.h": "c",
+        "mmu.h": "c",
+        "env.h": "c",
+        "trap.h": "c",
+        "pmap.h": "c",
+        "kclock.h": "c",
+        "lib.h": "c",
+        "stdio.h": "c",
+        "stdarg.h": "c"
+    }
+} // {
+//     "files.associations": {
+//         "*.s": "c",
+//         "Makefrag": "makefile",
+//         "*.S": "cpp",
+//         "mmu.h": "c",
+//         "stdio.h": "c",
+//         "stdarg.h": "c",
+//         "types.h": "c",
+//         "kdebug.h": "c"
+//     }
+// }

@@ -65,19 +65,57 @@ static const char *trapname(int trapno)
 	return "(unknown trap)";
 }
 
-
+// 初始化IDT，中断描述表
 void
 trap_init(void)
 {
 	extern struct Segdesc gdt[];
 
 	// LAB 3: Your code here.
+	// 在这里定义的空函数，会与kern/trapentry.S中的对应函数联系在一起
+	// 在 trapentry.S 会将 th0，th1这些声明为全局函数，所以这里要保证函数名称的一致性
+	// 链接器会将这里与汇编的函数联系在一起
+	void th0();
+	void th1();
+	void th3();
+	void th4();
+	void th5();
+	void th6();
+	void th7();
+	void th8();
+	void th9();
+	void th10();
+	void th11();
+	void th12();
+	void th13();
+	void th14();
+	void th16();
+	void th_syscall();
+	SETGATE(idt[0], 0, GD_KT, th0, 0);		//格式如下：SETGATE(gate, istrap, sel, off, dpl)，定义在inc/mmu.h中
+	SETGATE(idt[1], 0, GD_KT, th1, 0);  	//设置idt[1]，段选择子为内核代码段，段内偏移为th1
+	SETGATE(idt[3], 0, GD_KT, th3, 3);
+	SETGATE(idt[4], 0, GD_KT, th4, 0);
+	SETGATE(idt[5], 0, GD_KT, th5, 0);
+	SETGATE(idt[6], 0, GD_KT, th6, 0);
+	SETGATE(idt[7], 0, GD_KT, th7, 0);
+	SETGATE(idt[8], 0, GD_KT, th8, 0);
+	SETGATE(idt[9], 0, GD_KT, th9, 0);
+	SETGATE(idt[10], 0, GD_KT, th10, 0);
+	SETGATE(idt[11], 0, GD_KT, th11, 0);
+	SETGATE(idt[12], 0, GD_KT, th12, 0);
+	SETGATE(idt[13], 0, GD_KT, th13, 0);
+	SETGATE(idt[14], 0, GD_KT, th14, 0);
+	SETGATE(idt[16], 0, GD_KT, th16, 0);
+
+	SETGATE(idt[T_SYSCALL], 0, GD_KT, th_syscall, 3);		//为什么门的DPL要定义为3，参考《x86汇编语言-从实模式到保护模式》p345
+
 
 	// Per-CPU setup 
 	trap_init_percpu();
 }
 
 // Initialize and load the per-CPU TSS and IDT
+// 初始化和加载 CPU的 TSS和 IDT
 void
 trap_init_percpu(void)
 {
@@ -108,6 +146,7 @@ trap_init_percpu(void)
 
 	// Setup a TSS so that we get the right stack
 	// when we trap to the kernel.
+	// 设置cpu 的TSS，告诉cpu在进入int中断的时候，切换到哪里的堆栈
 	ts.ts_esp0 = KSTACKTOP;
 	ts.ts_ss0 = GD_KD;
 	ts.ts_iomb = sizeof(struct Taskstate);
@@ -119,9 +158,11 @@ trap_init_percpu(void)
 
 	// Load the TSS selector (like other segment selectors, the
 	// bottom three bits are special; we leave them 0)
+	// 加载中断描述表，当发生int中断时，cpu会自动切换工作堆栈，进入内核堆栈
 	ltr(GD_TSS0);
 
 	// Load the IDT
+	// 加载之前设置的中断描述表
 	lidt(&idt_pd);
 }
 
@@ -238,8 +279,14 @@ trap(struct Trapframe *tf)
 		// Copy trap frame (which is currently on the stack)
 		// into 'curenv->env_tf', so that running the environment
 		// will restart at the trap point.
+		// tf 中记录了用户环境调用中断之后的返回位置，此时tf在堆栈上
+		// curenv中存储的是用户程序的入口，需要替换成返回位置，
+		// 之后env_run(curenv);可以返回用户中断位置
 		curenv->env_tf = *tf;
 		// The trapframe on the stack should be ignored from here on.
+
+		// 此时 tf 指向了存储env的空间中，后续更新curenv的参数，可以调用tf直接访问
+		// 不需要区分堆栈上的tf，还是curenv_envtf
 		tf = &curenv->env_tf;
 	}
 
@@ -248,6 +295,7 @@ trap(struct Trapframe *tf)
 	last_tf = tf;
 
 	// Dispatch based on what type of trap occurred
+	// 根据发起中断的环境 tf，执行不同操作
 	trap_dispatch(tf);
 
 	// If we made it to this point, then no other environment was
@@ -271,7 +319,9 @@ page_fault_handler(struct Trapframe *tf)
 	// Handle kernel-mode page faults.
 
 	// LAB 3: Your code here.
-
+	if ((tf->tf_cs & 3) == 0) //内核态发生缺页中断直接panic
+		panic("page_fault_handler():page fault in kernel mode!\n");
+		
 	// We've already handled kernel-mode exceptions, so if we get here,
 	// the page fault happened in user mode.
 

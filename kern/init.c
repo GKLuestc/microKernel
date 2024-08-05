@@ -21,18 +21,39 @@ static void boot_aps(void);
 void
 i386_init(void)
 {
+	extern char edata[], end[];
+
+	// cprintf("edata addr =  0x%x \n", (uint32_t)((char *)edata));
+	// cprintf("end addr =  0x%x \n", (uint32_t)((char *)end));	
+	// Before doing anything else, complete the ELF loading process.
+	// Clear the uninitialized global data (BSS) section of our program.
+	// This ensures that all static/global variables start out zero.
+	// 完成ELF后续工作，将 .bss段的全局变量和静态变量清零
+	memset(edata, 0, end - edata);
+
 	// Initialize the console.
 	// Can't call cprintf until after we do this!
+	// 控制台初始化
 	cons_init();
 
 	cprintf("6828 decimal is %o octal!\n", 6828);
 
 	// Lab 2 memory management initialization functions
+	// 根据mmu.h初始化内存结构，建立映射关系
+	// 设置cr0 和 cr3 启动分页机制
 	mem_init();
 
 	// Lab 3 user environment initialization functions
+	// 初始化环境链表，初步初始化GDT全局描述符，设置段的权限，预留TSS段
 	env_init();
-	trap_init();
+
+	// trap_init 函数的作用是初始化陷阱（trap）处理机制，以便操作系统能够正确处理各种陷阱和中断。
+	// 初始化中断 IDT表，
+	// 设置cpu的 TSS 段和 IDT 表
+	trap_init();	
+					
+	cprintf("***************** System Init Over!! *****************\n\n");
+
 
 	// Lab 4 multiprocessor initialization functions
 	mp_init();
@@ -120,7 +141,10 @@ mp_main(void)
  */
 const char *panicstr;
 
+
+
 /*
+ * 当程序错误，打印file，直接启动 monitor 函数
  * Panic is called on unresolvable fatal errors.
  * It prints "panic: mesg", and then enters the kernel monitor.
  */

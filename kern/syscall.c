@@ -22,6 +22,7 @@ sys_cputs(const char *s, size_t len)
 	// Destroy the environment if not.
 
 	// LAB 3: Your code here.
+	user_mem_assert(curenv, s, len, 0);
 
 	// Print the string supplied by the user.
 	cprintf("%.*s", len, s);
@@ -53,12 +54,19 @@ sys_env_destroy(envid_t envid)
 	int r;
 	struct Env *e;
 
-	if ((r = envid2env(envid, &e, 1)) < 0)
-		return r;
+	// 如果查不到环境 id，直接返回错误
+	if ((r = envid2env(envid, &e, 1)) < 0){
+		panic("sys_env_destroy->envid2env: %e", r);
+		return r;		
+	}
+
+	// 打印销毁信息，是自身销毁，还是当前环境销毁其他环境
 	if (e == curenv)
 		cprintf("[%08x] exiting gracefully\n", curenv->env_id);
 	else
 		cprintf("[%08x] destroying %08x\n", curenv->env_id, e->env_id);
+
+	// 销毁环境
 	env_destroy(e);
 	return 0;
 }
@@ -271,11 +279,27 @@ syscall(uint32_t syscallno, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, 
 	// Return any appropriate return value.
 	// LAB 3: Your code here.
 
-	panic("syscall not implemented");
+	// panic("syscall not implemented");
 
-	switch (syscallno) {
-	default:
-		return -E_INVAL;
+	int32_t ret;
+	switch (syscallno) {    //根据系统调用号调用相应函数
+		case SYS_cputs:
+			sys_cputs((char *)a1, (size_t)a2);
+			ret = 0;
+			break;
+		case SYS_cgetc:
+			ret = sys_cgetc();
+			break;
+		case SYS_getenvid:
+			ret = sys_getenvid();
+			break;
+		case SYS_env_destroy:
+			ret = sys_env_destroy((envid_t)a1);
+			break;
+		default:
+			return -E_INVAL;
 	}
+	
+	return ret;
 }
 
