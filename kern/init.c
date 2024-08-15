@@ -79,7 +79,7 @@ i386_init(void)
 	// for(int i = 0; i < 3; i++){
 	// 	ENV_CREATE(user_yield, ENV_TYPE_USER);		
 	// }
-	ENV_CREATE(user_stresssched, ENV_TYPE_USER);
+	ENV_CREATE(user_pingpong, ENV_TYPE_USER);
 #endif // TEST*
 
 	// Schedule and run the first user environment!

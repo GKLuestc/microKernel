@@ -371,13 +371,91 @@ sys_page_unmap(envid_t envid, void *va)
 //		address space.
 //	-E_INVAL if (perm & PTE_W), but srcva is read-only in the
 //		current environment's address space.
-//	-E_NO_MEM if there's not enough memory to map srcva in envid's
+//	-E_NO_MEM if there's not enough memory to map srcva in envid'sz
 //		address space.
 static int
 sys_ipc_try_send(envid_t envid, uint32_t value, void *srcva, unsigned perm)
 {
 	// LAB 4: Your code here.
-	panic("sys_ipc_try_send not implemented");
+	struct Env *rcvenv;
+	int ret;
+	int debug = 0;
+
+	// 如果没有查到环境
+	if( (ret = envid2env(envid, &rcvenv, 0)) < 0){
+		return ret;
+	}
+
+	// 如果目标环境并不需要接收数据
+	if(rcvenv->env_ipc_recving == 0){
+		return -E_IPC_NOT_RECV;
+	}
+
+	// 如果发送页面，属于用户空间，没有超限
+	// 并且接收者也需要接收一页数据，在env_ipc_dstva虚拟地址中
+	if(srcva < (void*)UTOP && rcvenv->env_ipc_dstva < (void*)UTOP){
+		//没有页面对齐
+		if(srcva != ROUNDDOWN(srcva, PGSIZE)){
+			if (debug) {
+				cprintf("sys_ipc_try_send():srcva is not page-alligned\n");
+			}
+			return -E_INVAL;
+		}
+
+		//查找虚拟地址映射的页表项
+		pte_t *pte;
+		struct PageInfo *pg = page_lookup(curenv->env_pgdir, srcva, &pte);
+		if (debug) {
+			cprintf("sys_ipc_try_send():srcva=%08x\n", (uintptr_t)srcva);
+		}
+
+		//权限检查不合适
+		if( (*pte & perm & 7) != (perm & 7) ){	
+			if (debug) {
+				cprintf("sys_ipc_try_send():perm is wrong\n");
+			}
+			return -E_INVAL;
+		}
+
+		//srcva还没有映射到物理页
+		if(pg == NULL){
+			if (debug) {
+				cprintf("sys_ipc_try_send():srcva is not maped\n");
+			}
+			return -E_INVAL;
+		}
+
+		// 如果没有写权限
+		if ((perm & PTE_W) && !(*pte & PTE_W)) {
+			if (debug) {
+				cprintf("sys_ipc_try_send():*pte do not have PTE_W, but perm have\n");
+			}
+			return -E_INVAL;
+		}		
+
+		// 映射相同页面
+		ret = page_insert(rcvenv->env_pgdir, pg, rcvenv->env_ipc_dstva, perm); //共享相同的映射关系
+		if (ret < 0) return ret;
+		rcvenv->env_ipc_perm = perm;
+	}
+
+	// 将接收者标记为不可再次接收，防止传递的数据被覆盖
+	rcvenv->env_ipc_recving = 0;
+
+	// 标记此次传输的发生者 ID
+	rcvenv->env_ipc_from = curenv->env_id;
+	
+	// 记录此次传输的单数据
+	rcvenv->env_ipc_value = value;
+	
+	// 将接收者，从阻塞态转为就绪态
+	rcvenv->env_status = ENV_RUNNABLE;
+	
+	// 将接收者的 eax 寄存器设为 0 ，也就是中断返回值
+	rcvenv->env_tf.tf_regs.reg_eax = 0;
+
+	return 0;
+
 }
 
 // Block until a value is ready.  Record that you want to receive
@@ -395,7 +473,20 @@ static int
 sys_ipc_recv(void *dstva)
 {
 	// LAB 4: Your code here.
-	panic("sys_ipc_recv not implemented");
+	// 表示愿意接收一页数据，但是没有页面对齐
+	if( dstva < (void*)UTOP && dstva != ROUNDDOWN(dstva, PGSIZE)){
+		return 	-E_INVAL;
+	}
+
+	//设置当前环境等待接收一个数据
+	curenv->env_ipc_recving = 1;
+
+	// 设置当前环境为阻塞态
+	curenv->env_status = ENV_NOT_RUNNABLE;
+	
+	// 记录当前环境需要接收页面的映射地址
+	curenv->env_ipc_dstva = dstva;
+
 	return 0;
 }
 
@@ -479,6 +570,16 @@ syscall(uint32_t syscallno, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, 
 		// 注册缺页中断异常处理函数
 		case SYS_env_set_pgfault_upcall:
 			ret = sys_env_set_pgfault_upcall((envid_t)a1, (void *)a2);
+			break;
+	
+		// IPC 进程间通信，发送中断函数
+		case SYS_ipc_try_send:
+			ret = sys_ipc_try_send((envid_t) a1, (uint32_t)a2, (void *)a3, (unsigned)a4);
+			break;
+
+		// IPC 进程间通信，接收中断函数
+		case SYS_ipc_recv:
+			ret = sys_ipc_recv((void *)a1);
 			break;
 
 		default:
