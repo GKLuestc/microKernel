@@ -124,9 +124,10 @@ env_init(void)
 
 	for(int i = NENV-1; i >= 0; i--){		//前插法
 		envs[i].env_id = 0;
-		envs->env_link = env_free_list;
+		envs[i].env_link = env_free_list;
 		env_free_list = &envs[i];
 	}
+
 
 	// Per-CPU part of the initialization
 	// 初始化cpu部分 
@@ -199,6 +200,7 @@ env_setup_vm(struct Env *e)
 
 	// UVPT maps the env's own page table read-only.
 	// Permissions: kernel R, user R
+	// 将用户页目录的物理地址放入 UVPT 中
 	e->env_pgdir[PDX(UVPT)] = PADDR(e->env_pgdir) | PTE_P | PTE_U;
 
 	return 0;
@@ -218,11 +220,14 @@ env_alloc(struct Env **newenv_store, envid_t parent_id)
 	int32_t generation;
 	int r;
 	struct Env *e;
-
 	if (!(e = env_free_list))
-		return -E_NO_FREE_ENV;
+	{
+		return -E_NO_FREE_ENV;		
+	}
+
 
 	// Allocate and set up the page directory for this environment.
+	//  为新环境申请一个页目录
 	if ((r = env_setup_vm(e)) < 0)
 		return r;
 
@@ -261,6 +266,7 @@ env_alloc(struct Env **newenv_store, envid_t parent_id)
 
 	// Enable interrupts while in user mode.
 	// LAB 4: Your code here.
+	e->env_tf.tf_eflags |= FL_IF;
 
 	// Clear the page fault handler until user installs one.
 	e->env_pgfault_upcall = 0;
@@ -520,7 +526,6 @@ env_pop_tf(struct Trapframe *tf)
 {
 	// Record the CPU we are running on for user-space debugging
 	curenv->env_cpunum = cpunum();
-
 	asm volatile(
 		"\tmovl %0,%%esp\n"
 		"\tpopal\n"
@@ -570,6 +575,9 @@ env_run(struct Env *e)
 	e->env_status = ENV_RUNNING;
 	e->env_runs++;
 	lcr3(PADDR(e->env_pgdir));    //切换当前用户的页目录，加载线性地址空间
+	
+
+	unlock_kernel(); //当前核心即将退出内核，执行其他任务，释放内核锁
 
 	// 切换 cpu 寄存器，相当于将cpu的执行权交给用户程序
 	env_pop_tf(&e->env_tf);       //将当前用户的寄存器实现

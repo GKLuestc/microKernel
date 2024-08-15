@@ -4,17 +4,19 @@
 #include <inc/types.h>
 
 // Comment this to disable spinlock debugging
+// 自旋锁调试
 #define DEBUG_SPINLOCK
 
 // Mutual exclusion lock.
+// 互斥锁
 struct spinlock {
 	unsigned locked;       // Is the lock held?
 
 #ifdef DEBUG_SPINLOCK
 	// For debugging:
-	char *name;            // Name of lock.
-	struct CpuInfo *cpu;   // The CPU holding the lock.
-	uintptr_t pcs[10];     // The call stack (an array of program counters)
+	char *name;            // 锁的名称		Name of lock.
+	struct CpuInfo *cpu;   // 持有锁的CPU	The CPU holding the lock.
+	uintptr_t pcs[10];     // 调用堆栈		The call stack (an array of program counters)
 	                       // that locked the lock.
 #endif
 };
@@ -27,12 +29,15 @@ void spin_unlock(struct spinlock *lk);
 
 extern struct spinlock kernel_lock;
 
+
+// 上锁，持有锁
 static inline void
 lock_kernel(void)
 {
 	spin_lock(&kernel_lock);
 }
 
+// 解锁，解除持有状态
 static inline void
 unlock_kernel(void)
 {

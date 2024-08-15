@@ -81,17 +81,19 @@ struct Trapframe {
     uint16_t tf_padding4;     // 填充使对齐			
 } __attribute__((packed));
 
+
+// 在用户态陷入缺页处理时候使用，进行用户态异常处理，保存原本用户程序的状态
 struct UTrapframe {
 	/* information about the fault */
-	uint32_t utf_fault_va;	/* va for T_PGFLT, 0 otherwise */
-	uint32_t utf_err;
+	uint32_t utf_fault_va;	// 保存了触发缺页中断的虚拟地址/* va for T_PGFLT, 0 otherwise */
+	uint32_t utf_err;		// 保存了错误代码，描述了中断或异常的原因
 	/* trap-time return state */
-	struct PushRegs utf_regs;
-	uintptr_t utf_eip;
-	uint32_t utf_eflags;
+	struct PushRegs utf_regs;	// 这个字段保存了当时的通用寄存器的值。
+	uintptr_t utf_eip;			// 保存了触发异常的指令地址（即异常发生时处理器的 EIP 寄存器的值），这有助于在处理完异常后能够返回并继续执行异常发生前的指令。
+	uint32_t utf_eflags;		// 保存了当时的 EFLAGS 寄存器的值，这包含了许多标志位，用于控制处理器状态和反映处理器的当前状态。
 	/* the trap-time stack to return to */
-	uintptr_t utf_esp;
-} __attribute__((packed));
+	uintptr_t utf_esp;			// 保存了当时的堆栈指针（ESP 寄存器）的值，即当异常发生时，程序所使用的堆栈的位置。
+} __attribute__((packed));		// 表示这个结构体在内存中按顺序紧密排列，没有任何填充字节。这在处理低级硬件操作时很常见，以确保数据在内存中的精确布局。
 
 #endif /* !__ASSEMBLER__ */
 

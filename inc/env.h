@@ -54,10 +54,10 @@ struct Env {
 	enum EnvType env_type;		// 这个是用来区分特殊环境的。大多数环境都是ENV_TYPE_USER类型。 Indicates special system environments
 	unsigned env_status;		// 当前环境的状态 Status of the environment
 	uint32_t env_runs;			// 记录运行的次数，可用于统计和调试 Number of times environment has run
-	int env_cpunum;			// The CPU that the env is running on
+	int env_cpunum;				// The CPU that the env is running on
 
 	// Address space
-	pde_t *env_pgdir;	// 指向该环境的页目录，管理该环境的虚拟地址空间。Kernel virtual address of page dir
+	pde_t *env_pgdir;		// 指向该环境的页目录，管理该环境的虚拟地址空间。Kernel virtual address of page dir
 
 	// Exception handling
 	void *env_pgfault_upcall;	// Page fault upcall entry point

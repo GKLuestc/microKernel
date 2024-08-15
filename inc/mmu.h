@@ -28,6 +28,7 @@
 // use PGADDR(PDX(la), PTX(la), PGOFF(la)).
 
 // page number field of address
+// 理想页表查询方式，直接使用高 22 位查询
 #define PGNUM(la)	(((uintptr_t) (la)) >> PTXSHIFT)
 
 // page directory index

@@ -27,7 +27,8 @@ static struct Command commands[] = {
 	{ "help", "Display this list of commands", mon_help },
 	{ "kerninfo", "Display information about the kernel", mon_kerninfo },
 	{ "GKL", "this function from gkl", mon_gkl },
-	{ "backtrace", "Display ebp", mon_backtrace}
+	{ "backtrace", "Display ebp", mon_backtrace},
+	{ "poweroff", "Shutting down", mon_poweroff}
 };
 
 /***** Implementations of basic kernel monitor commands *****/
@@ -116,6 +117,31 @@ mon_gkl(int argc, char **argv, struct Trapframe *tf)
 
 	return 0;
 }
+
+int 
+mon_poweroff(int argc, char **argv, struct Trapframe *tf)
+{
+    cprintf("Shutting down...\n");
+
+    // 尝试 QEMU 关机接口
+    qemu_poweroff();
+
+    // // 尝试 ACPI 关机
+    // acpi_poweroff();
+
+    // // 尝试 APM 关机
+    // apm_poweroff();
+
+    // // 触发三重故障（最后的手段）
+    // triple_fault_shutdown();
+
+    // // 如果都失败，陷入死循环
+    // while (1) {
+    //     asm volatile("hlt");
+    // }
+	return 0;
+}
+
 
 
 

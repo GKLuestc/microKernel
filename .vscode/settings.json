@@ -12,7 +12,9 @@
         "kclock.h": "c",
         "lib.h": "c",
         "stdio.h": "c",
-        "stdarg.h": "c"
+        "stdarg.h": "c",
+        "x86.h": "c",
+        "picirq.h": "c"
     }
 } // {
 //     "files.associations": {
