@@ -77,8 +77,10 @@ sched_halt(void)
 	// 检查了所有环境都没有，进入monitor
 	if (i == NENV) {
 		cprintf("No runnable environments in the system!\n");
-		while (1)
-			monitor(NULL);
+		if(thiscpu->cpu_id == 0){
+			while (1)
+				monitor(NULL);					
+		}
 	}
 
 	// Mark that no environment is running on this CPU
