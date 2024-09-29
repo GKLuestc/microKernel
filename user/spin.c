@@ -12,7 +12,7 @@ umain(int argc, char **argv)
 	if ((env = fork()) == 0) {
 		cprintf("I am the child.  Spinning...\n");
 		while (1)
-			/* do nothing */;
+			cprintf("I am the child. wait interupt.....\n");
 	}
 
 	cprintf("I am the parent.  Running the child...\n");
@@ -28,4 +28,3 @@ umain(int argc, char **argv)
 	cprintf("I am the parent.  Killing the child...\n");
 	sys_env_destroy(env);
 }
-

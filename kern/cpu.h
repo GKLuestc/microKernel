@@ -12,17 +12,17 @@
 
 // Values of status in struct Cpu
 enum {
-	CPU_UNUSED = 0,
-	CPU_STARTED,
-	CPU_HALTED,
+	CPU_UNUSED = 0,		//表示这个 CPU 目前未被使用或尚未初始化。
+	CPU_STARTED,		//表示该 CPU 已经被启动并运行
+	CPU_HALTED,			//表示该 CPU 处于暂停或停止状态。
 };
 
-// Per-CPU state
+// 每个 CPU 在多处理器系统中的状态和相关信息 Per-CPU state
 struct CpuInfo {
-	uint8_t cpu_id;                 // Local APIC ID; index into cpus[] below
-	volatile unsigned cpu_status;   // The status of the CPU
-	struct Env *cpu_env;            // The currently-running environment.
-	struct Taskstate cpu_ts;        // Used by x86 to find stack for interrupt
+	uint8_t cpu_id;                 // 本地 APIC 的 ID，它是一个唯一标识符，用于标识系统中的每个 CPU（或核心） 	Local APIC ID; index into cpus[] below
+	volatile unsigned cpu_status;   // 当前 CPU 的状态，用于标识该 CPU 的运行状态。 						The status of the CPU
+	struct Env *cpu_env;            // 一个指向 Env 结构体的指针，用于指向当前正在此 CPU 上运行的执行环境		The currently-running environment.
+	struct Taskstate cpu_ts;        //这个字段用于保存 x86 架构中的任务状态段 								 Used by x86 to find stack for interrupt
 };
 
 // Initialized in mpconfig.c

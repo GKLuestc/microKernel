@@ -62,7 +62,7 @@ struct Pseudodesc gdt_pd = {
 	sizeof(gdt) - 1, (unsigned long) gdt
 };
 
-//
+// 将环境的id转为环境指针
 // Converts an envid to an env pointer.
 // If checkperm is set, the specified environment must be either the
 // current environment or an immediate child of the current environment.
@@ -119,11 +119,22 @@ env_init(void)
 {
 	// Set up envs array
 	// LAB 3: Your code here.
+	// 空闲环节列表，从小到大排序
+	env_free_list = NULL;
+
+	for(int i = NENV-1; i >= 0; i--){		//前插法
+		envs[i].env_id = 0;
+		envs[i].env_link = env_free_list;
+		env_free_list = &envs[i];
+	}
+
 
 	// Per-CPU part of the initialization
+	// 初始化cpu部分 
 	env_init_percpu();
 }
 
+// 加载 GDT 和 段描述符
 // Load GDT and segment descriptors.
 void
 env_init_percpu(void)
@@ -145,7 +156,7 @@ env_init_percpu(void)
 	lldt(0);
 }
 
-//
+// 为新用户申请一个页目录，页目录相当于记录了这个用户所有的信息位置
 // Initialize the kernel virtual memory layout for environment e.
 // Allocate a page directory, set e->env_pgdir accordingly,
 // and initialize the kernel portion of the new environment's address space.
@@ -162,6 +173,7 @@ env_setup_vm(struct Env *e)
 	struct PageInfo *p = NULL;
 
 	// Allocate a page for the page directory
+	// 申请一个页面当作用户的页目录
 	if (!(p = page_alloc(ALLOC_ZERO)))
 		return -E_NO_MEM;
 
@@ -182,15 +194,19 @@ env_setup_vm(struct Env *e)
 	//    - The functions in kern/pmap.h are handy.
 
 	// LAB 3: Your code here.
+	p->pp_ref++;
+	e->env_pgdir = (pde_t *)page2kva(p);	//将页面当作用户页目录
+	memcpy(e->env_pgdir, kern_pgdir, PGSIZE); //继承内核页目录
 
 	// UVPT maps the env's own page table read-only.
 	// Permissions: kernel R, user R
+	// 将用户页目录的物理地址放入 UVPT 中
 	e->env_pgdir[PDX(UVPT)] = PADDR(e->env_pgdir) | PTE_P | PTE_U;
 
 	return 0;
 }
 
-//
+// 申请一个新环境，放在newenv_store中
 // Allocates and initializes a new environment.
 // On success, the new environment is stored in *newenv_store.
 //
@@ -204,11 +220,14 @@ env_alloc(struct Env **newenv_store, envid_t parent_id)
 	int32_t generation;
 	int r;
 	struct Env *e;
-
 	if (!(e = env_free_list))
-		return -E_NO_FREE_ENV;
+	{
+		return -E_NO_FREE_ENV;		
+	}
+
 
 	// Allocate and set up the page directory for this environment.
+	//  为新环境申请一个页目录
 	if ((r = env_setup_vm(e)) < 0)
 		return r;
 
@@ -238,15 +257,17 @@ env_alloc(struct Env **newenv_store, envid_t parent_id)
 	// we switch privilege levels, the hardware does various
 	// checks involving the RPL and the Descriptor Privilege Level
 	// (DPL) stored in the descriptors themselves.
+	e->env_tf.tf_cs = GD_UT | 3;	
 	e->env_tf.tf_ds = GD_UD | 3;
 	e->env_tf.tf_es = GD_UD | 3;
 	e->env_tf.tf_ss = GD_UD | 3;
 	e->env_tf.tf_esp = USTACKTOP;
-	e->env_tf.tf_cs = GD_UT | 3;
 	// You will set e->env_tf.tf_eip later.
 
 	// Enable interrupts while in user mode.
 	// LAB 4: Your code here.
+	// 在用户模式的时候，打开外部中断
+	e->env_tf.tf_eflags |= FL_IF;
 
 	// Clear the page fault handler until user installs one.
 	e->env_pgfault_upcall = 0;
@@ -262,7 +283,7 @@ env_alloc(struct Env **newenv_store, envid_t parent_id)
 	return 0;
 }
 
-//
+//为用户 e 分配 va + len 的空间，循环申请页面满足
 // Allocate len bytes of physical memory for environment env,
 // and map it at virtual address va in the environment's address space.
 // Does not zero or otherwise initialize the mapped pages in any way.
@@ -274,6 +295,19 @@ region_alloc(struct Env *e, void *va, size_t len)
 {
 	// LAB 3: Your code here.
 	// (But only if you need it for load_icode.)
+	// 向上向下取整，保证 va 和 len是对PGSIZE对齐，并且能装下 len
+	void *begin = ROUNDDOWN(va, PGSIZE);
+	void *end = ROUNDUP(va+len, PGSIZE);
+
+
+	while(begin < end){
+		struct PageInfo* pp = page_alloc(0);
+		if(pp == NULL)
+			panic("region_alloc failed\n");
+		page_insert(e->env_pgdir, pp, begin, PTE_W | PTE_U); // 映射页面
+		begin += PGSIZE;
+	}
+
 	//
 	// Hint: It is easier to use region_alloc if the caller can pass
 	//   'va' and 'len' values that are not page-aligned.
@@ -281,7 +315,7 @@ region_alloc(struct Env *e, void *va, size_t len)
 	//   (Watch out for corner-cases!)
 }
 
-//
+// 加载用户程序的ELF到用户空间，并且分配一个页面当作栈空间
 // Set up the initial program binary, stack, and processor flags
 // for a user process.
 // This function is ONLY called during kernel initialization,
@@ -335,14 +369,52 @@ load_icode(struct Env *e, uint8_t *binary)
 	//  What?  (See env_run() and env_pop_tf() below.)
 
 	// LAB 3: Your code here.
+	struct Elf *ELFHDR = (struct Elf *)binary;
+	struct Proghdr *ph;
+	int num = 0;
+    uint32_t i;
+
+
+	// 检查是否为有效的 ELF 文件 
+	if (ELFHDR->e_magic != ELF_MAGIC)
+		 panic("load_icode: invalid ELF");
+
+	ph = (struct Proghdr *) ( binary + ELFHDR->e_phoff);
+	num = ELFHDR->e_phnum;
+	
+	lcr3(PADDR(e->env_pgdir));			//这步别忘了，虽然到目前位置e->env_pgdir和kern_pgdir除了PDX(UVPT)这一项不同，其他都一样。
+										//但是后面会给e->env_pgdir增加映射关系
+
+	for (int i = 0 ; i < num; i++){
+		//只加载LOAD类型的Segment
+		if( ph[i].p_type == ELF_PROG_LOAD ){
+
+			region_alloc(e, (void *)ph[i].p_va, ph[i].p_memsz);
+
+			//因为这里需要访问刚分配的内存，所以之前需要切换页目录
+			// memset 是根据cr3来进行访问
+			memset((void *)ph[i].p_va, 0, ph[i].p_memsz);		
+			
+			//应该有如下关系：ph->p_filesz <= ph->p_memsz。搜索BSS段	
+			memcpy((void *)ph[i].p_va, binary + ph[i].p_offset, ph[i].p_filesz);
+		}
+	
+	}
+
+	lcr3(PADDR(kern_pgdir));
+
+	// e->env_tf.tf_eip 中保存程序的第一条指令，记录程序入口
+	e->env_tf.tf_eip = ELFHDR->e_entry;
 
 	// Now map one page for the program's initial stack
 	// at virtual address USTACKTOP - PGSIZE.
 
 	// LAB 3: Your code here.
+	// 为当前环境申请一个页面的栈区
+	region_alloc(e, (void *) (USTACKTOP - PGSIZE), PGSIZE);
 }
 
-//
+// 申请一个空闲用户空间，加载从binary地址开始处的ELF可执行文件到该Env结构。
 // Allocates a new env with env_alloc, loads the named elf
 // binary into it with load_icode, and sets its env_type.
 // This function is ONLY called during kernel initialization,
@@ -356,6 +428,17 @@ env_create(uint8_t *binary, enum EnvType type)
 
 	// If this is the file server (type == ENV_TYPE_FS) give it I/O privileges.
 	// LAB 5: Your code here.
+	struct Env *env;
+	
+	// 申请一个空闲环境，父进程设置为 0 
+	if( env_alloc(&env, 0) != 0){
+		panic("env_create fault \n");
+	}
+
+	// 从 binary 这个二进制用户程序起始地址，加载 ELF 到内存中
+	// 设置 用户程序入口，申请一个页面当作栈区（能够满足轻量程序需求）
+	load_icode(env,binary);
+	env->env_type = type;
 }
 
 //
@@ -411,7 +494,7 @@ env_free(struct Env *e)
 	env_free_list = e;
 }
 
-//
+// 释放用户环境，并且启动 monitor 监控程序
 // Frees environment e.
 // If e was the current env, then runs a new environment (and does not return
 // to the caller).
@@ -447,7 +530,6 @@ env_pop_tf(struct Trapframe *tf)
 {
 	// Record the CPU we are running on for user-space debugging
 	curenv->env_cpunum = cpunum();
-
 	asm volatile(
 		"\tmovl %0,%%esp\n"
 		"\tpopal\n"
@@ -459,7 +541,7 @@ env_pop_tf(struct Trapframe *tf)
 	panic("iret failed");  /* mostly to placate the compiler */
 }
 
-//
+// 运行当前环境 e
 // Context switch from curenv to env e.
 // Note: if this is the first call to env_run, curenv is NULL.
 //
@@ -486,7 +568,22 @@ env_run(struct Env *e)
 	//	e->env_tf to sensible values.
 
 	// LAB 3: Your code here.
+	if(curenv != NULL && curenv->env_status == ENV_RUNNING){
+		curenv->env_status = ENV_RUNNABLE;
+	}
 
-	panic("env_run not yet implemented");
+	// 切换当前用户
+	curenv = e;
+
+	// 将当前用户切换为运行状态	
+	e->env_status = ENV_RUNNING;
+	e->env_runs++;
+	lcr3(PADDR(e->env_pgdir));    //切换当前用户的页目录，加载线性地址空间
+	
+
+	unlock_kernel(); //当前核心即将退出内核，执行其他任务，释放内核锁
+
+	// 切换 cpu 寄存器，相当于将cpu的执行权交给用户程序
+	env_pop_tf(&e->env_tf);       //将当前用户的寄存器实现
 }
 

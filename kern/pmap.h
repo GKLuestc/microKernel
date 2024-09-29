@@ -10,6 +10,7 @@
 #include <inc/assert.h>
 struct Env;
 
+// 标志了内核堆栈的物理位置，entry.S决定
 extern char bootstacktop[], bootstack[];
 
 extern struct PageInfo *pages;
@@ -23,6 +24,8 @@ extern pde_t *kern_pgdir;
  * and returns the corresponding physical address.  It panics if you pass it a
  * non-kernel virtual address.
  */
+
+// 将虚拟地址转换为物理地址
 #define PADDR(kva) _paddr(__FILE__, __LINE__, kva)
 
 static inline physaddr_t
@@ -35,6 +38,7 @@ _paddr(const char *file, int line, void *kva)
 
 /* This macro takes a physical address and returns the corresponding kernel
  * virtual address.  It panics if you pass an invalid physical address. */
+// 将物理地址转换为虚拟地址
 #define KADDR(pa) _kaddr(__FILE__, __LINE__, pa)
 
 static inline void*
@@ -68,12 +72,15 @@ void *	mmio_map_region(physaddr_t pa, size_t size);
 int	user_mem_check(struct Env *env, const void *va, size_t len, int perm);
 void	user_mem_assert(struct Env *env, const void *va, size_t len, int perm);
 
+
+// 将页面转为其物理地址
 static inline physaddr_t
 page2pa(struct PageInfo *pp)
 {
 	return (pp - pages) << PGSHIFT;
 }
 
+// 物理地址转为页面
 static inline struct PageInfo*
 pa2page(physaddr_t pa)
 {
@@ -82,6 +89,8 @@ pa2page(physaddr_t pa)
 	return &pages[PGNUM(pa)];
 }
 
+
+// 将页面转为其虚拟地址
 static inline void*
 page2kva(struct PageInfo *pp)
 {

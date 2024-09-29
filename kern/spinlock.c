@@ -68,8 +68,9 @@ spin_lock(struct spinlock *lk)
 	// The xchg is atomic.
 	// It also serializes, so that reads after acquire are not
 	// reordered before it. 
+	// 自旋锁，不停检查锁的状态，使用原子操作
 	while (xchg(&lk->locked, 1) != 0)
-		asm volatile ("pause");
+		asm volatile ("pause");			//pause指令相当于一个带延迟的noop指令, 主要是为了减少能耗。
 
 	// Record info about lock acquisition for debugging.
 #ifdef DEBUG_SPINLOCK

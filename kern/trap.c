@@ -26,9 +26,9 @@ static struct Trapframe *last_tf;
  * shifted function addresses can't be represented in relocation records.)
  */
 struct Gatedesc idt[256] = { { 0 } };
-struct Pseudodesc idt_pd = {
-	sizeof(idt) - 1, (uint32_t) idt
-};
+
+// idt全局变量，中断表的大小255，起始地址 idt
+struct Pseudodesc idt_pd = { sizeof(idt) - 1, (uint32_t) idt };
 
 
 static const char *trapname(int trapno)
@@ -65,19 +65,96 @@ static const char *trapname(int trapno)
 	return "(unknown trap)";
 }
 
-
+// 初始化IDT，中断描述表
 void
 trap_init(void)
 {
 	extern struct Segdesc gdt[];
 
 	// LAB 3: Your code here.
+	// 在这里定义的空函数，会与kern/trapentry.S中的对应函数联系在一起
+	// 在 trapentry.S 会将 th0，th1这些声明为全局函数，所以这里要保证函数名称的一致性
+	// 链接器会将这里与汇编的函数联系在一起
+	void th0();
+	void th1();
+	void th3();
+	void th4();
+	void th5();
+	void th6();
+	void th7();
+	void th8();
+	void th9();
+	void th10();
+	void th11();
+	void th12();
+	void th13();
+	void th14();
+	void th16();
+
+	void th32();
+	void th33();
+	void th34();
+	void th35();
+	void th36();
+	void th37();
+	void th38();
+	void th39();
+	void th40();
+	void th41();
+	void th42();
+	void th43();
+	void th44();
+	void th45();
+	void th46();
+	void th47();
+
+	void th_syscall();
+	
+	// 将处理函数的函数位置写入 idt数组的对应位置
+	// 当发生 24号中断，cpu会自动跳转到 idt[24]所存储的函数指针位置，执行中断处理函数
+	SETGATE(idt[0], 0, GD_KT, th0, 0);		//格式如下：SETGATE(gate, istrap, sel, off, dpl)，定义在inc/mmu.h中
+	SETGATE(idt[1], 0, GD_KT, th1, 0);  	//设置idt[1]，段选择子为内核代码段，段内偏移为th1
+	SETGATE(idt[3], 0, GD_KT, th3, 3);
+	SETGATE(idt[4], 0, GD_KT, th4, 0);
+	SETGATE(idt[5], 0, GD_KT, th5, 0);
+	SETGATE(idt[6], 0, GD_KT, th6, 0);
+	SETGATE(idt[7], 0, GD_KT, th7, 0);
+	SETGATE(idt[8], 0, GD_KT, th8, 0);
+	SETGATE(idt[9], 0, GD_KT, th9, 0);
+	SETGATE(idt[10], 0, GD_KT, th10, 0);
+	SETGATE(idt[11], 0, GD_KT, th11, 0);
+	SETGATE(idt[12], 0, GD_KT, th12, 0);
+	SETGATE(idt[13], 0, GD_KT, th13, 0);
+	SETGATE(idt[14], 0, GD_KT, th14, 0);
+	SETGATE(idt[16], 0, GD_KT, th16, 0);
+
+	SETGATE(idt[IRQ_OFFSET], 0, GD_KT, th32, 0);
+	SETGATE(idt[IRQ_OFFSET + 1], 0, GD_KT, th33, 0);
+	SETGATE(idt[IRQ_OFFSET + 2], 0, GD_KT, th34, 0);
+	SETGATE(idt[IRQ_OFFSET + 3], 0, GD_KT, th35, 0);
+	SETGATE(idt[IRQ_OFFSET + 4], 0, GD_KT, th36, 0);
+	SETGATE(idt[IRQ_OFFSET + 5], 0, GD_KT, th37, 0);
+	SETGATE(idt[IRQ_OFFSET + 6], 0, GD_KT, th38, 0);
+	SETGATE(idt[IRQ_OFFSET + 7], 0, GD_KT, th39, 0);
+	SETGATE(idt[IRQ_OFFSET + 8], 0, GD_KT, th40, 0);
+	SETGATE(idt[IRQ_OFFSET + 9], 0, GD_KT, th41, 0);
+	SETGATE(idt[IRQ_OFFSET + 10], 0, GD_KT, th42, 0);
+	SETGATE(idt[IRQ_OFFSET + 11], 0, GD_KT, th43, 0);
+	SETGATE(idt[IRQ_OFFSET + 12], 0, GD_KT, th44, 0);
+	SETGATE(idt[IRQ_OFFSET + 13], 0, GD_KT, th45, 0);
+	SETGATE(idt[IRQ_OFFSET + 14], 0, GD_KT, th46, 0);
+	SETGATE(idt[IRQ_OFFSET + 15], 0, GD_KT, th47, 0);
+
+	SETGATE(idt[T_SYSCALL], 0, GD_KT, th_syscall, 3);		//为什么门的DPL要定义为3，参考《x86汇编语言-从实模式到保护模式》p345
+
 
 	// Per-CPU setup 
+	// 每个 CPU 都要独立执行一次
 	trap_init_percpu();
 }
 
 // Initialize and load the per-CPU TSS and IDT
+// 初始化和加载 CPU的 TSS和 IDT
 void
 trap_init_percpu(void)
 {
@@ -105,26 +182,31 @@ trap_init_percpu(void)
 	// user space on that CPU.
 	//
 	// LAB 4: Your code here:
+	int cid = thiscpu->cpu_id;
 
 	// Setup a TSS so that we get the right stack
 	// when we trap to the kernel.
-	ts.ts_esp0 = KSTACKTOP;
-	ts.ts_ss0 = GD_KD;
-	ts.ts_iomb = sizeof(struct Taskstate);
+	// 设置cpu 的TSS，告诉cpu在进入int中断的时候，切换到哪里的堆栈
+	thiscpu->cpu_ts.ts_esp0 = KSTACKTOP - cid * (KSTKSIZE + KSTKGAP);
+	thiscpu->cpu_ts.ts_ss0 = GD_KD;
 
 	// Initialize the TSS slot of the gdt.
-	gdt[GD_TSS0 >> 3] = SEG16(STS_T32A, (uint32_t) (&ts),
-					sizeof(struct Taskstate) - 1, 0);
-	gdt[GD_TSS0 >> 3].sd_s = 0;
+	gdt[(GD_TSS0 >> 3)+cid] = SEG16(STS_T32A, (uint32_t) (&(thiscpu->cpu_ts)),
+					sizeof(struct Taskstate), 0);
+	gdt[(GD_TSS0 >> 3)+cid].sd_s = 0;
 
 	// Load the TSS selector (like other segment selectors, the
 	// bottom three bits are special; we leave them 0)
-	ltr(GD_TSS0);
+	// 加载中断描述表，当发生int中断时，cpu会自动切换工作堆栈，进入内核堆栈
+	ltr(GD_TSS0+8*cid);
 
 	// Load the IDT
+	// 加载之前设置的中断描述表
 	lidt(&idt_pd);
 }
 
+
+// 打印触发中断或异常的 CPU 快照，
 void
 print_trapframe(struct Trapframe *tf)
 {
@@ -158,6 +240,8 @@ print_trapframe(struct Trapframe *tf)
 	}
 }
 
+
+//打印所有寄存器
 void
 print_regs(struct PushRegs *regs)
 {
@@ -171,11 +255,28 @@ print_regs(struct PushRegs *regs)
 	cprintf("  eax  0x%08x\n", regs->reg_eax);
 }
 
+
+// 根据不同的异常或中断类型，选择不同的处理方式
 static void
 trap_dispatch(struct Trapframe *tf)
 {
 	// Handle processor exceptions.
 	// LAB 3: Your code here.
+	if (tf->tf_trapno == T_PGFLT) {
+		page_fault_handler(tf);
+		return;
+	}
+	if (tf->tf_trapno == T_BRKPT) {
+		monitor(tf);
+		return;
+	}
+
+
+	if (tf->tf_trapno == T_SYSCALL) {
+		tf->tf_regs.reg_eax = syscall(tf->tf_regs.reg_eax, tf->tf_regs.reg_edx, tf->tf_regs.reg_ecx,
+			tf->tf_regs.reg_ebx, tf->tf_regs.reg_edi, tf->tf_regs.reg_esi);
+		return;
+	}
 
 	// Handle spurious interrupts
 	// The hardware sometimes raises these because of noise on the
@@ -189,7 +290,12 @@ trap_dispatch(struct Trapframe *tf)
 	// Handle clock interrupts. Don't forget to acknowledge the
 	// interrupt using lapic_eoi() before calling the scheduler!
 	// LAB 4: Your code here.
-
+	if (tf->tf_trapno == IRQ_OFFSET + IRQ_TIMER) {
+		lapic_eoi();
+		sched_yield();
+		return;
+	}
+	
 	// Handle keyboard and serial interrupts.
 	// LAB 5: Your code here.
 
@@ -203,8 +309,9 @@ trap_dispatch(struct Trapframe *tf)
 	}
 }
 
-void
-trap(struct Trapframe *tf)
+
+// 当异常或中断触发，从trapentry.S汇编进入trap函数
+void trap(struct Trapframe *tf)
 {
 	// The environment may have set DF and some versions
 	// of GCC rely on DF being clear
@@ -215,22 +322,28 @@ trap(struct Trapframe *tf)
 	if (panicstr)
 		asm volatile("hlt");
 
-	// Re-acqurie the big kernel lock if we were halted in
-	// sched_yield()
-	if (xchg(&thiscpu->cpu_status, CPU_STARTED) == CPU_HALTED)
+	// Re-acqurie the big kernel lock if we were halted in sched_yield()
+	if (xchg(&thiscpu->cpu_status, CPU_STARTED) == CPU_HALTED){
 		lock_kernel();
+	}
+
+
+
 	// Check that interrupts are disabled.  If this assertion
 	// fails, DO NOT be tempted to fix it by inserting a "cli" in
 	// the interrupt path.
 	assert(!(read_eflags() & FL_IF));
 
+	// 如果引起中断的是用户程序，权限 3，要切换上下文
 	if ((tf->tf_cs & 3) == 3) {
 		// Trapped from user mode.
 		// Acquire the big kernel lock before doing any
 		// serious kernel work.
 		// LAB 4: Your code here.
 		assert(curenv);
+		lock_kernel();
 
+		
 		// Garbage collect if current enviroment is a zombie
 		if (curenv->env_status == ENV_DYING) {
 			env_free(curenv);
@@ -241,8 +354,14 @@ trap(struct Trapframe *tf)
 		// Copy trap frame (which is currently on the stack)
 		// into 'curenv->env_tf', so that running the environment
 		// will restart at the trap point.
+		// tf 中记录了用户环境调用中断之后的返回位置，此时tf在堆栈上
+		// curenv中存储的是用户程序的入口，需要替换成返回位置，
+		// 之后env_run(curenv);可以返回用户中断位置
 		curenv->env_tf = *tf;
 		// The trapframe on the stack should be ignored from here on.
+
+		// 此时 tf 指向了存储env的空间中，后续更新curenv的参数，可以调用tf直接访问
+		// 不需要区分堆栈上的tf，还是curenv_envtf
 		tf = &curenv->env_tf;
 	}
 
@@ -251,15 +370,23 @@ trap(struct Trapframe *tf)
 	last_tf = tf;
 
 	// Dispatch based on what type of trap occurred
+	// 根据发起中断的环境 tf，执行不同操作
 	trap_dispatch(tf);
+
+
 
 	// If we made it to this point, then no other environment was
 	// scheduled, so we should return to the current environment
 	// if doing so makes sense.
-	if (curenv && curenv->env_status == ENV_RUNNING)
-		env_run(curenv);
-	else
-		sched_yield();
+	if (curenv && curenv->env_status == ENV_RUNNING){
+		// cprintf("trap over return env \n");
+		env_run(curenv);		
+	}
+	else{
+		// cprintf("trap over return sched \n");
+		sched_yield();		
+	}
+
 }
 
 
@@ -274,7 +401,12 @@ page_fault_handler(struct Trapframe *tf)
 	// Handle kernel-mode page faults.
 
 	// LAB 3: Your code here.
+	// 检测权限，内核发生缺页
+	if ((tf->tf_cs & 3) == 0) //内核态发生缺页中断直接panic
+		panic("page_fault_handler():page fault in kernel mode!\n");
+	
 
+	// 到达这里，说明是用户发生了页面错误中断
 	// We've already handled kernel-mode exceptions, so if we get here,
 	// the page fault happened in user mode.
 
@@ -308,6 +440,32 @@ page_fault_handler(struct Trapframe *tf)
 	//   (the 'tf' variable points at 'curenv->env_tf').
 
 	// LAB 4: Your code here.
+	// 当前用户环境有注册页错误处理程序
+	if(curenv->env_pgfault_upcall){
+		uintptr_t stacktop = UXSTACKTOP;
+
+		// 判断是不是第一次进入用户错误处理程序
+		// 若发起中断的程序的 esp 在用户异常栈则直接使用（否则在异常程序触发缺页中断时会覆盖之前的堆栈，导致错误）
+		if( tf->tf_esp > UXSTACKTOP - PGSIZE &&  tf->tf_esp < UXSTACKTOP){
+			stacktop = tf->tf_esp;
+		}
+
+		uint32_t size = sizeof(struct UTrapframe) + sizeof(uint32_t);
+		user_mem_assert(curenv, (void*)stacktop-size, size, PTE_W | PTE_U);
+		struct UTrapframe *utr = (struct UTrapframe *)(stacktop - size);
+
+		// 保存触发中断的用户程序状态，以便中断之后返回
+		utr->utf_fault_va = fault_va;
+		utr->utf_err = tf->tf_err;
+		utr->utf_regs = tf->tf_regs;
+		utr->utf_eip = tf->tf_eip;
+		utr->utf_eflags = tf->tf_eflags;
+		utr->utf_esp = tf->tf_esp;		//UXSTACKTOP栈上需要保存发生缺页异常时的%esp和%eip
+
+		curenv->env_tf.tf_eip = (uintptr_t)curenv->env_pgfault_upcall;
+		curenv->env_tf.tf_esp = (uintptr_t)utr;
+		env_run(curenv);				//重新进入用户态，此时执行用户注册的异常处理函数
+	}
 
 	// Destroy the environment that caused the fault.
 	cprintf("[%08x] user fault va %08x ip %08x\n",

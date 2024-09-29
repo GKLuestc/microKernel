@@ -30,25 +30,26 @@
  **********************************************************************/
 
 #define SECTSIZE	512
-#define ELFHDR		((struct Elf *) 0x10000) // scratch space
+#define ELFHDR		((struct Elf *) 0x10000) // 零时的 ELF 文件头  scratch space  
 
 void readsect(void*, uint32_t);
 void readseg(uint32_t, uint32_t, uint32_t);
 
-void
-bootmain(void)
+
+// 该函数由 boot.S 启动
+void bootmain(void)
 {
 	struct Proghdr *ph, *eph;
 	int i;
 
-	// read 1st page off disk
+	// 读取磁盘的第一个扇面 512 字节   read 1st page off disk
 	readseg((uint32_t) ELFHDR, SECTSIZE*8, 0);
 
-	// is this a valid ELF?
+	// 检查是否为有效的 ELF 文件   is this a valid ELF?
 	if (ELFHDR->e_magic != ELF_MAGIC)
 		goto bad;
 
-	// load each program segment (ignores ph flags)
+	// 加载每个程序段（忽略 ph 标志）   load each program segment (ignores ph flags)
 	ph = (struct Proghdr *) ((uint8_t *) ELFHDR + ELFHDR->e_phoff);
 	eph = ph + ELFHDR->e_phnum;
 	for (; ph < eph; ph++) {
@@ -62,6 +63,7 @@ bootmain(void)
 
 	// call the entry point from the ELF header
 	// note: does not return!
+	// 从ELF头中调用入口点（不返回）
 	((void (*)(void)) (ELFHDR->e_entry))();
 
 bad:
@@ -73,8 +75,8 @@ bad:
 
 // Read 'count' bytes at 'offset' from kernel into physical address 'pa'.
 // Might copy more than asked
-void
-readseg(uint32_t pa, uint32_t count, uint32_t offset)
+// 读取磁盘
+void readseg(uint32_t pa, uint32_t count, uint32_t offset)
 {
 	uint32_t end_pa;
 
@@ -100,16 +102,16 @@ readseg(uint32_t pa, uint32_t count, uint32_t offset)
 	}
 }
 
-void
-waitdisk(void)
+// 等待磁盘准备好
+void waitdisk(void)
 {
 	// wait for disk reaady
 	while ((inb(0x1F7) & 0xC0) != 0x40)
 		/* do nothing */;
 }
 
-void
-readsect(void *dst, uint32_t offset)
+// 读取扇区的数据到目标地址
+void readsect(void *dst, uint32_t offset)
 {
 	// wait for disk to be ready
 	waitdisk();

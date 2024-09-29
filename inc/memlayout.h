@@ -12,11 +12,12 @@
  */
 
 // Global descriptor numbers
-#define GD_KT     0x08     // kernel text
-#define GD_KD     0x10     // kernel data
-#define GD_UT     0x18     // user text
-#define GD_UD     0x20     // user data
-#define GD_TSS0   0x28     // Task segment selector for CPU 0
+//全局描述符编号
+#define GD_KT     0x08     // kernel text 内核代码段 通常在进入内核模式时加载到 cs 寄存器
+#define GD_KD     0x10     // kernel data 内核数据段 通常在进入内核模式时加载到 ds, es, fs, gs, ss 寄存器
+#define GD_UT     0x18     // user text 用户代码段
+#define GD_UD     0x20     // user data 用户数据段
+#define GD_TSS0   0x28     // Task segment selector for CPU 0 任务状态段（TSS）
 
 /*
  * Virtual memory map:                                Permissions
@@ -89,15 +90,19 @@
 // At IOPHYSMEM (640K) there is a 384K hole for I/O.  From the kernel,
 // IOPHYSMEM can be addressed at KERNBASE + IOPHYSMEM.  The hole ends
 // at physical address EXTPHYSMEM.
+// IO设备的内存位置 0x0A_0000 - 0x10_0000  = 384 Kb
 #define IOPHYSMEM	0x0A0000
 #define EXTPHYSMEM	0x100000
 
-// Kernel stack.
+// Kernel stack. 内核栈的大小，为 8 个页面（每页 4KB）
+// PGSIZE = 4 KB
+// 内核堆栈
 #define KSTACKTOP	KERNBASE
-#define KSTKSIZE	(8*PGSIZE)   		// size of a kernel stack
-#define KSTKGAP		(8*PGSIZE)   		// size of a kernel stack guard
+#define KSTKSIZE	(8*PGSIZE)   		// size of a kernel stack（内核堆栈大小）
+#define KSTKGAP		(8*PGSIZE)   		// size of a kernel stack guard（内核堆栈保卫大小）
 
 // Memory-mapped IO.
+// IO 孔
 #define MMIOLIM		(KSTACKTOP - PTSIZE)
 #define MMIOBASE	(MMIOLIM - PTSIZE)
 
@@ -175,6 +180,11 @@ extern volatile pde_t uvpd[];     // VA of current page directory
  * You can map a struct PageInfo * to the corresponding physical address
  * with page2pa() in kern/pmap.h.
  */
+/*
+* 页描述符结构，映射到 UPAGES。对内核读/写，对用户程序只读。每个结构体PageInfo存储一个物理页面的元数据。不
+* 是物理页本身，而是物理页和结构体PageInfo之间有一对一的对应关系。
+* 你可以映射一个结构体PageInfo到相应的物理地址,使用kern/pmap.h中的page2pa()。
+*/
 struct PageInfo {
 	// Next page on the free list.
 	struct PageInfo *pp_link;

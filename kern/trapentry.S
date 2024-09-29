@@ -48,9 +48,56 @@
  * Lab 3: Your code here for generating entry points for the different traps.
  */
 
+	TRAPHANDLER_NOEC(th0, 0)
+	TRAPHANDLER_NOEC(th1, 1)
+	TRAPHANDLER_NOEC(th3, 3)
+	TRAPHANDLER_NOEC(th4, 4)
+	TRAPHANDLER_NOEC(th5, 5)
+	TRAPHANDLER_NOEC(th6, 6)
+	TRAPHANDLER_NOEC(th7, 7)
+	TRAPHANDLER(th8, 8)
+	TRAPHANDLER_NOEC(th9, 9)
+	TRAPHANDLER(th10, 10)
+	TRAPHANDLER(th11, 11)
+	TRAPHANDLER(th12, 12)
+	TRAPHANDLER(th13, 13)	// 一般保护故障（当用户权限主动发起缺页中断，会被转到13号一般中断上）
+	TRAPHANDLER(th14, 14)	// 缺页中断，只能由内核权限发起
+	TRAPHANDLER_NOEC(th16, 16)
+	
+	TRAPHANDLER_NOEC(th32, IRQ_OFFSET)
+	TRAPHANDLER_NOEC(th33, IRQ_OFFSET + 1)
+	TRAPHANDLER_NOEC(th34, IRQ_OFFSET + 2)
+	TRAPHANDLER_NOEC(th35, IRQ_OFFSET + 3)
+	TRAPHANDLER_NOEC(th36, IRQ_OFFSET + 4)
+	TRAPHANDLER_NOEC(th37, IRQ_OFFSET + 5)
+	TRAPHANDLER_NOEC(th38, IRQ_OFFSET + 6)
+	TRAPHANDLER_NOEC(th39, IRQ_OFFSET + 7)
+	TRAPHANDLER_NOEC(th40, IRQ_OFFSET + 8)
+	TRAPHANDLER_NOEC(th41, IRQ_OFFSET + 9)
+	TRAPHANDLER_NOEC(th42, IRQ_OFFSET + 10)
+	TRAPHANDLER_NOEC(th43, IRQ_OFFSET + 11)
+	TRAPHANDLER_NOEC(th44, IRQ_OFFSET + 12)
+	TRAPHANDLER_NOEC(th45, IRQ_OFFSET + 13)
+	TRAPHANDLER_NOEC(th46, IRQ_OFFSET + 14)
+	TRAPHANDLER_NOEC(th47, IRQ_OFFSET + 15)
 
+	TRAPHANDLER_NOEC(th_syscall, T_SYSCALL)
 
 /*
  * Lab 3: Your code here for _alltraps
  */
 
+	//参考inc/trap.h中的Trapframe结构。tf_ss，tf_esp，tf_eflags，tf_cs，tf_eip，tf_err在中断发生时由处理器压入，所以现在只需要压入剩下寄存器（%ds,%es,通用寄存器）
+	//切换到内核数据段
+	_alltraps:
+    pushl %ds         // 保存段寄存器 DS
+    pushl %es         // 保存段寄存器 ES
+    pushal            // 保存所有通用寄存器
+    pushl $GD_KD      // 压入内核数据段选择子
+    popl %ds          // 加载内核数据段到 DS
+    pushl $GD_KD      // 再次压入内核数据段选择子
+    popl %es          // 加载内核数据段到 ES
+    pushl %esp        // 压入当前栈指针（指向 Trapframe 结构的起始地址）
+    call trap         // 调用 C 函数 trap()
+
+	//调用call trap之后，不会从这里ret返回，而是在trap函数中，直接根据发起中断的用户环境设置cpu，实现返回

@@ -45,6 +45,7 @@
 physaddr_t lapicaddr;        // Initialized in mpconfig.c
 volatile uint32_t *lapic;
 
+// 用于向指定的APIC寄存器写入值。
 static void
 lapicw(int index, int value)
 {
@@ -52,9 +53,12 @@ lapicw(int index, int value)
 	lapic[ID];  // wait for write to finish, by reading
 }
 
+
+// 初始化本地APIC，使其能够正常工作。
 void
 lapic_init(void)
 {
+	// 如果 lapicaddr 为空，表示没有配置APIC，函数直接返回。
 	if (!lapicaddr)
 		return;
 
@@ -63,12 +67,14 @@ lapic_init(void)
 	lapic = mmio_map_region(lapicaddr, 4096);
 
 	// Enable local APIC; set spurious interrupt vector.
+	// 启用本地APIC，设置仿冒中断向量。
 	lapicw(SVR, ENABLE | (IRQ_OFFSET + IRQ_SPURIOUS));
 
 	// The timer repeatedly counts down at bus frequency
 	// from lapic[TICR] and then issues an interrupt.  
 	// If we cared more about precise timekeeping,
 	// TICR would be calibrated using an external time source.
+	// 配置APIC定时器，以周期性中断的方式工作。
 	lapicw(TDCR, X1);
 	lapicw(TIMER, PERIODIC | (IRQ_OFFSET + IRQ_TIMER));
 	lapicw(TICR, 10000000); 
@@ -95,6 +101,7 @@ lapic_init(void)
 	lapicw(ERROR, IRQ_OFFSET + IRQ_ERROR);
 
 	// Clear error status register (requires back-to-back writes).
+	// 清除错误状态寄存器并初始化中断控制器
 	lapicw(ESR, 0);
 	lapicw(ESR, 0);
 
@@ -108,9 +115,12 @@ lapic_init(void)
 		;
 
 	// Enable interrupts on the APIC (but not on the processor).
+	// 使能APIC中断。
 	lapicw(TPR, 0);
 }
 
+
+// 获取当前CPU的ID。
 int
 cpunum(void)
 {
@@ -119,7 +129,7 @@ cpunum(void)
 	return 0;
 }
 
-// Acknowledge interrupt.
+// 发送“中断结束信号”（End of Interrupt, EOI），表示当前中断处理完毕。
 void
 lapic_eoi(void)
 {
@@ -129,6 +139,7 @@ lapic_eoi(void)
 
 // Spin for a given number of microseconds.
 // On real hardware would want to tune this dynamically.
+// 在程序中延迟指定的微秒数。
 static void
 microdelay(int us)
 {
@@ -138,6 +149,7 @@ microdelay(int us)
 
 // Start additional processor running entry code at addr.
 // See Appendix B of MultiProcessor Specification.
+// 启动另一个处理器（AP）。
 void
 lapic_startap(uint8_t apicid, uint32_t addr)
 {
@@ -173,6 +185,8 @@ lapic_startap(uint8_t apicid, uint32_t addr)
 	}
 }
 
+
+// 向其他处理器发送固定中断。
 void
 lapic_ipi(int vector)
 {

@@ -20,16 +20,17 @@ syscall(int num, int check, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, 
 	// potentially change the condition codes and arbitrary
 	// memory locations.
 
+	// 这里的 1% 相当于取后面的第一个操作数，“i”(T_SYSCALL)
 	asm volatile("int %1\n"
-		     : "=a" (ret)
-		     : "i" (T_SYSCALL),
-		       "a" (num),
-		       "d" (a1),
-		       "c" (a2),
-		       "b" (a3),
-		       "D" (a4),
-		       "S" (a5)
-		     : "cc", "memory");
+		     : "=a" (ret)			// 输出: ret 存储在 EAX 寄存器中
+		     : "i" (T_SYSCALL),		// 输入: 中断号存储在立即数 T_SYSCALL 中
+		       "a" (num),			// 输入: 系统调用号存储在 EAX 寄存器中
+		       "d" (a1),			// 输入: 第一个参数存储在 EDX 寄存器中
+		       "c" (a2),			// 输入: 第二个参数存储在 ECX 寄存器中
+		       "b" (a3),			// 输入: 第三个参数存储在 EBX 寄存器中
+		       "D" (a4),			// 输入: 第四个参数存储在 EDI 寄存器中
+		       "S" (a5)				// 输入: 第五个参数存储在 ESI 寄存器中
+		     : "cc", "memory");		// 告诉编译器此指令会修改条件码和内存
 
 	if(check && ret > 0)
 		panic("syscall %d returned %d (> 0)", num, ret);

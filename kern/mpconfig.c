@@ -10,13 +10,13 @@
 #include <kern/cpu.h>
 #include <kern/pmap.h>
 
-struct CpuInfo cpus[NCPU];
-struct CpuInfo *bootcpu;
+struct CpuInfo cpus[NCPU];	// 记录所有的cpu核心信息
+struct CpuInfo *bootcpu;	// 指向 BSP 核心信息
 int ismp;
 int ncpu;
 
 // Per-CPU kernel stacks
-unsigned char percpu_kstacks[NCPU][KSTKSIZE]
+unsigned char percpu_kstacks[NCPU][KSTKSIZE]	// 为每个cpu保持一个 KSTKSIZE 大小的内核栈
 __attribute__ ((aligned(PGSIZE)));
 
 
@@ -171,12 +171,14 @@ mp_init(void)
 	uint8_t *p;
 	unsigned int i;
 
+	// 读取多核配置，由BIOS写入内存低位置中
 	bootcpu = &cpus[0];
 	if ((conf = mpconfig(&mp)) == 0)
 		return;
 	ismp = 1;
 	lapicaddr = conf->lapicaddr;
 
+	// 读取配置文件，写入cpu数组
 	for (p = conf->entries, i = 0; i < conf->entry; i++) {
 		switch (*p) {
 		case MPPROC:
