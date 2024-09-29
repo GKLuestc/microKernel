@@ -27,18 +27,18 @@
 #define MAXFILESIZE	((NDIRECT + NINDIRECT) * BLKSIZE)
 
 struct File {
-	char f_name[MAXNAMELEN];	// filename
-	off_t f_size;			// file size in bytes
-	uint32_t f_type;		// file type
+	char f_name[MAXNAMELEN];	// 文件名字 filename
+	off_t f_size;				// 文件大小 file size in bytes
+	uint32_t f_type;			// 文件类型 file type
 
 	// Block pointers.
 	// A block is allocated iff its value is != 0.
-	uint32_t f_direct[NDIRECT];	// direct blocks
-	uint32_t f_indirect;		// indirect block
+	uint32_t f_direct[NDIRECT];	// 直接块指针用于快速访问文件的前几个数据块。 direct blocks
+	uint32_t f_indirect;		// 间接块指针 indirect block
 
 	// Pad out to 256 bytes; must do arithmetic in case we're compiling
 	// fsformat on a 64-bit machine.
-	uint8_t f_pad[256 - MAXNAMELEN - 8 - 4*NDIRECT - 4];
+	uint8_t f_pad[256 - MAXNAMELEN - 8 - 4*NDIRECT - 4]; //填充数组，用于确保结构体的大小为 256 字节。
 } __attribute__((packed));	// required only on some 64-bit machines
 
 // An inode block contains exactly BLKFILES 'struct File's
@@ -54,9 +54,9 @@ struct File {
 #define FS_MAGIC	0x4A0530AE	// related vaguely to 'J\0S!'
 
 struct Super {
-	uint32_t s_magic;		// Magic number: FS_MAGIC
-	uint32_t s_nblocks;		// Total number of blocks on disk
-	struct File s_root;		// Root directory node
+	uint32_t s_magic;		// 用于标识文件系统类型 Magic number: FS_MAGIC
+	uint32_t s_nblocks;		// 总共块数大小 Total number of blocks on disk
+	struct File s_root;		// 文件系统根目录的File描述结构体 Root directory node
 };
 
 // Definitions for requests from clients to file system

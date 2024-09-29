@@ -425,16 +425,17 @@ void
 env_create(uint8_t *binary, enum EnvType type)
 {
 	// LAB 3: Your code here.
-
-	// If this is the file server (type == ENV_TYPE_FS) give it I/O privileges.
-	// LAB 5: Your code here.
-
-	
 	struct Env *env;
-	
+
 	// 申请一个空闲环境，父进程设置为 0 
 	if( env_alloc(&env, 0) != 0){
 		panic("env_create fault \n");
+	}
+
+	// If this is the file server (type == ENV_TYPE_FS) give it I/O privileges.
+	// LAB 5: Your code here.
+	if( type == ENV_TYPE_FS ){
+		env->env_tf.tf_eflags |= FL_IOPL_MASK;
 	}
 
 	// 从 binary 这个二进制用户程序起始地址，加载 ELF 到内存中
