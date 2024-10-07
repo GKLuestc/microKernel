@@ -2,7 +2,7 @@
 #include <inc/lib.h>
 
 #define SECTSIZE	512			// bytes per disk sector
-#define BLKSECTS	(BLKSIZE / SECTSIZE)	// sectors per block
+#define BLKSECTS	(BLKSIZE / SECTSIZE)	// =8（一个块 4KB 对应 8个扇区 sectors per block）
 
 /* Disk block n, when in memory, is mapped into the file system
  * server's address space at DISKMAP + (n*BLKSIZE). */

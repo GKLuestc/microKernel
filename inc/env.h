@@ -41,6 +41,7 @@ enum {
 	ENV_NOT_RUNNABLE	//表示该进程当前不可运行，即它处于阻塞状态。
 };
 
+// 特殊环境类型，用户环境，fs进程环境
 // Special environment types
 enum EnvType {
 	ENV_TYPE_USER = 0,
@@ -61,7 +62,7 @@ struct Env {
 	pde_t *env_pgdir;		// 指向该环境的页目录，管理该环境的虚拟地址空间。Kernel virtual address of page dir
 
 	// Exception handling
-	void *env_pgfault_upcall;	// Page fault upcall entry point
+	void *env_pgfault_upcall;	// 用户环境，为自己注册一个页面异常处理函数 Page fault upcall entry point
 
 	// Lab 4 IPC
 	bool env_ipc_recving;		// 是否需要接收数据，0 - 不需要， 1 - 需要      Env is blocked receiving

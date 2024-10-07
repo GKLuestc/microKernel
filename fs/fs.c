@@ -10,6 +10,7 @@ uint32_t *bitmap;		// bitmap blocks mapped in memory
 // Super block
 // --------------------------------------------------------------
 
+// 验证系统根文件，即超级块 Super
 // Validate the file system super-block.
 void
 check_super(void)
@@ -27,6 +28,7 @@ check_super(void)
 // Free block bitmap
 // --------------------------------------------------------------
 
+// 通过bitmap检测空块，空返回 1，非空返回 0
 // Check to see if the block bitmap indicates that block 'blockno' is free.
 // Return 1 if the block is free, 0 if not.
 bool
@@ -39,6 +41,7 @@ block_is_free(uint32_t blockno)
 	return 0;
 }
 
+// 通过bitmap，释放一个空块，当有申请操作的时候，再写入磁盘进行刷新
 // Mark a block free in the bitmap
 void
 free_block(uint32_t blockno)
@@ -49,6 +52,7 @@ free_block(uint32_t blockno)
 	bitmap[blockno/32] |= 1<<(blockno%32);
 }
 
+// 申请一个 block 块磁盘，返回块号
 // Search the bitmap for a free block and allocate it.  When you
 // allocate a block, immediately flush the changed bitmap block
 // to disk.
@@ -65,10 +69,21 @@ alloc_block(void)
 	// super->s_nblocks blocks in the disk altogether.
 
 	// LAB 5: Your code here.
+	uint32_t bmpblock_start = 2;
+
+	for(int blockno = bmpblock_start; blockno < super->s_nblocks; blockno++){
+		if(block_is_free(blockno)){
+			bitmap[blockno/32] &= ~( 1<<(blockno%32) );
+			flush_block(diskaddr(bmpblock_start + (blockno / 32) / NINDIRECT));
+			return blockno;
+		}
+	}
+
 	panic("alloc_block not implemented");
 	return -E_NO_DISK;
 }
 
+// 验证 预留块0，块1，和bitmap块，这三个部分是否存在
 // Validate the file system bitmap.
 //
 // Check that all reserved blocks -- 0, 1, and the bitmap blocks themselves --
@@ -79,8 +94,16 @@ check_bitmap(void)
 	uint32_t i;
 
 	// Make sure all bitmap blocks are marked in-use
-	for (i = 0; i * BLKBITSIZE < super->s_nblocks; i++)
-		assert(!block_is_free(2+i));
+	// 磁盘的块数量可能会超过一个bitmap块存储的4096*8个，这时候就需要这种for循环来判断
+	// (super->s_nblocks) / BLKBITSIZE = bitmap所占用的块数量
+	// for (i = 0; i  < (super->s_nblocks) / BLKBITSIZE + 1; i++){
+	// 	assert(!block_is_free(2+i));		
+	// }
+
+	for (i = 0; i * BLKBITSIZE  < super->s_nblocks; i++){
+		assert(!block_is_free(2+i));		
+	}
+	// assert(!block_is_free(2));
 
 	// Make sure the reserved and root blocks are marked in-use.
 	assert(!block_is_free(0));
@@ -94,7 +117,7 @@ check_bitmap(void)
 // --------------------------------------------------------------
 
 
-
+// 初始化文件系统，设置缺页处理函数，读取super块、bitmap块
 // Initialize the file system
 void
 fs_init(void)
@@ -137,8 +160,31 @@ fs_init(void)
 static int
 file_block_walk(struct File *f, uint32_t filebno, uint32_t **ppdiskbno, bool alloc)
 {
-       // LAB 5: Your code here.
-       panic("file_block_walk not implemented");
+    // LAB 5: Your code here.
+	int bn;
+	uint32_t *indirects;
+	if (filebno >= NDIRECT + NINDIRECT)
+		return -E_INVAL;
+
+	if (filebno < NDIRECT) {
+		*ppdiskbno = &(f->f_direct[filebno]);
+	} else {
+		if (f->f_indirect) {
+			indirects = diskaddr(f->f_indirect);
+			*ppdiskbno = &(indirects[filebno - NDIRECT]);
+		} else {
+			if (!alloc)
+				return -E_NOT_FOUND;
+			if ((bn = alloc_block()) < 0)
+				return bn;
+			f->f_indirect = bn;
+			flush_block(diskaddr(bn));
+			indirects = diskaddr(bn);
+			*ppdiskbno = &(indirects[filebno - NDIRECT]);
+		}
+	}
+
+	return 0;
 }
 
 // Set *blk to the address in memory where the filebno'th
@@ -152,8 +198,23 @@ file_block_walk(struct File *f, uint32_t filebno, uint32_t **ppdiskbno, bool all
 int
 file_get_block(struct File *f, uint32_t filebno, char **blk)
 {
-       // LAB 5: Your code here.
-       panic("file_get_block not implemented");
+	// LAB 5: Your code here.
+	int r;
+	uint32_t *pdiskbno;
+	if ((r = file_block_walk(f, filebno, &pdiskbno, true)) < 0) {
+		return r;
+	}
+
+	int bn;
+	if (*pdiskbno == 0) {			//此时*pdiskbno保存着文件f第filebno块block的索引
+		if ((bn = alloc_block()) < 0) {
+			return bn;
+		}
+		*pdiskbno = bn;
+		flush_block(diskaddr(bn));
+	}
+	*blk = diskaddr(*pdiskbno);
+	return 0;
 }
 
 // Try to find a file named "name" in dir.  If so, set *file to it.

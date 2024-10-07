@@ -27,8 +27,9 @@ static struct Trapframe *last_tf;
  */
 struct Gatedesc idt[256] = { { 0 } };
 
+
 // idt全局变量，中断表的大小255，起始地址 idt
-struct Pseudodesc idt_pd = { sizeof(idt) - 1, (uint32_t) idt };
+struct Pseudodesc idt_pd = { sizeof(idt) - 1, (uint32_t)idt };
 
 
 static const char *trapname(int trapno)

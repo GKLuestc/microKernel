@@ -61,15 +61,15 @@
 
 // Page table/directory entry flags.
 // 页表条目所携带的标志位信息 ( 页目录和页表通用 )
-#define PTE_P		0x001	// Present
-#define PTE_W		0x002	// Writeable
-#define PTE_U		0x004	// User
-#define PTE_PWT		0x008	// Write-Through
-#define PTE_PCD		0x010	// Cache-Disable
-#define PTE_A		0x020	// Accessed
-#define PTE_D		0x040	// Dirty
-#define PTE_PS		0x080	// Page Size
-#define PTE_G		0x100	// Global
+#define PTE_P		0x001	// 存在 Present
+#define PTE_W		0x002	// 可写 Writeable
+#define PTE_U		0x004	// 用户能够访问 User
+#define PTE_PWT		0x008	// 当写入操作发送，数据同时写入缓存和主存 Write-Through
+#define PTE_PCD		0x010	// 标志该页面的缓存策略 Cache-Disable
+#define PTE_A		0x020	// 指示该页面是否被访问过 Accessed
+#define PTE_D		0x040	// 脏位 指示该页面是否被修改过 Dirty
+#define PTE_PS		0x080	// 标识该页表条目所指向的页面是否是大页 Page Size
+#define PTE_G		0x100	// 表示该页面是全局的，适用于所有进程 Global
 
 // The PTE_AVAIL bits aren't used by the kernel or interpreted by the
 // hardware, so user processes are allowed to set them arbitrarily.

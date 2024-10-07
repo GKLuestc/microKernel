@@ -26,10 +26,13 @@ va_is_dirty(void *va)
 
 // Fault any disk block that is read in to memory by
 // loading it from disk.
+//FS进程缺页处理函数, 负责将数据从磁盘读取到对应的内存
 static void
 bc_pgfault(struct UTrapframe *utf)
 {
-	void *addr = (void *) utf->utf_fault_va;
+	// 地址
+	void *addr = (void *) utf->utf_fault_va;					
+	// 尺寸
 	uint32_t blockno = ((uint32_t)addr - DISKMAP) / BLKSIZE;
 	int r;
 
@@ -48,9 +51,16 @@ bc_pgfault(struct UTrapframe *utf)
 	// the disk.
 	//
 	// LAB 5: you code here:
+	addr = ROUNDDOWN(addr, PGSIZE);
+	sys_page_alloc(0, addr, PTE_W|PTE_U|PTE_P);
+
+	if((r=ide_read(blockno * BLKSECTS, addr, BLKSECTS)) < 0){
+		panic("ide_read: %e", r);
+	}
 
 	// Clear the dirty bit for the disk block page since we just read the
 	// block from disk
+	// 清除脏位，标志这个块数据是最新的，因为刚刚只进行了读取操作
 	if ((r = sys_page_map(0, addr, 0, addr, uvpt[PGNUM(addr)] & PTE_SYSCALL)) < 0)
 		panic("in bc_pgfault, sys_page_map: %e", r);
 
@@ -61,6 +71,8 @@ bc_pgfault(struct UTrapframe *utf)
 		panic("reading free block %08x\n", blockno);
 }
 
+
+// 将一个block写入磁盘。
 // Flush the contents of the block containing VA out to disk if
 // necessary, then clear the PTE_D bit using sys_page_map.
 // If the block is not in the block cache or is not dirty, does
@@ -77,7 +89,24 @@ flush_block(void *addr)
 		panic("flush_block of bad va %08x", addr);
 
 	// LAB 5: Your code here.
-	panic("flush_block not implemented");
+	// 
+
+	addr = ROUNDDOWN(addr, PGSIZE);
+	int r;
+
+	//如果addr还没有映射过或者该页载入到内存后还没有被写过，不用做任何事
+	if( !va_is_mapped(addr) || !va_is_dirty(addr)){
+		return ;
+	}
+
+	// 写入磁盘
+	if( (r=ide_write(blockno*BLKSECTS, addr, BLKSECTS)) < 0){
+		panic("in flush_block, ide_write(): %e", r);
+	}
+	
+	//清空PTE_D位
+	if ((r = sys_page_map(0, addr, 0, addr, uvpt[PGNUM(addr)] & PTE_SYSCALL)) < 0)	
+		panic("in bc_pgfault, sys_page_map: %e", r);
 }
 
 // Test that the block cache works, by smashing the superblock and
@@ -142,7 +171,10 @@ void
 bc_init(void)
 {
 	struct Super super;
+
+	// 设置缺页中断处理函数
 	set_pgfault_handler(bc_pgfault);
+	
 	check_bc();
 
 	// cache the super block by reading it once

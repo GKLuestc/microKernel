@@ -1,5 +1,6 @@
 {
     "files.associations": {
+        "*.txt": "plaintext",
         "*.s": "c",
         "Makefrag": "makefile",
         "*.S": "plaintext",
@@ -14,7 +15,12 @@
         "stdio.h": "c",
         "stdarg.h": "c",
         "x86.h": "c",
-        "picirq.h": "c"
+        "picirq.h": "c",
+        "*.asm": "bibtex",
+        "syscall.h": "c",
+        "fd.h": "c",
+        "types.h": "c",
+        "fs.h": "c"
     }
 } // {
 //     "files.associations": {
