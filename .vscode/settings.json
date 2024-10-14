@@ -1,9 +1,10 @@
 {
     "files.associations": {
-        "*.txt": "plaintext",
         "*.s": "c",
         "Makefrag": "makefile",
         "*.S": "plaintext",
+        "*.asm": "bibtex",
+        "*.txt": "plaintext",
         "monitor.h": "c",
         "string.h": "c",
         "mmu.h": "c",
@@ -16,11 +17,11 @@
         "stdarg.h": "c",
         "x86.h": "c",
         "picirq.h": "c",
-        "*.asm": "bibtex",
         "syscall.h": "c",
         "fd.h": "c",
         "types.h": "c",
-        "fs.h": "c"
+        "fs.h": "c",
+        "memlayout.h": "c"
     }
 } // {
 //     "files.associations": {

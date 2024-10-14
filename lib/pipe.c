@@ -9,12 +9,12 @@ static int devpipe_close(struct Fd *fd);
 
 struct Dev devpipe =
 {
-	.dev_id =	'p',
-	.dev_name =	"pipe",
-	.dev_read =	devpipe_read,
-	.dev_write =	devpipe_write,
-	.dev_close =	devpipe_close,
-	.dev_stat =	devpipe_stat,
+	.dev_id    = 'p',
+	.dev_name  = "pipe",
+	.dev_read  = devpipe_read,
+	.dev_write = devpipe_write,
+	.dev_close = devpipe_close,
+	.dev_stat  = devpipe_stat,
 };
 
 #define PIPEBUFSIZ 32		// small to provoke races

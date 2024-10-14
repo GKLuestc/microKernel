@@ -43,10 +43,10 @@ struct Dev devcons =
 {
 	.dev_id =	'c',
 	.dev_name =	"cons",
-	.dev_read =	devcons_read,
-	.dev_write =	devcons_write,
-	.dev_close =	devcons_close,
-	.dev_stat =	devcons_stat
+	.dev_read =	 devcons_read,
+	.dev_write = devcons_write,
+	.dev_close = devcons_close,
+	.dev_stat =	 devcons_stat
 };
 
 int

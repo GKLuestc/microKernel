@@ -58,6 +58,7 @@ fd_alloc(struct Fd **fd_store)
 
 	for (i = 0; i < MAXFD; i++) {
 		fd = INDEX2FD(i);
+		// 查询用户页目录，该虚拟地址是否权限合规
 		if ((uvpd[PDX(fd)] & PTE_P) == 0 || (uvpt[PGNUM(fd)] & PTE_P) == 0) {
 			*fd_store = fd;
 			return 0;
@@ -83,6 +84,7 @@ fd_lookup(int fdnum, struct Fd **fd_store)
 			cprintf("[%08x] bad fd %d\n", thisenv->env_id, fdnum);
 		return -E_INVAL;
 	}
+
 	fd = INDEX2FD(fdnum);
 	if (!(uvpd[PDX(fd)] & PTE_P) || !(uvpt[PGNUM(fd)] & PTE_P)) {
 		if (debug)
@@ -126,6 +128,7 @@ fd_close(struct Fd *fd, bool must_exist)
 // File functions
 // --------------------------------------------------------------
 
+// fd设备结构体数组
 static struct Dev *devtab[] =
 {
 	&devfile,
