@@ -38,11 +38,11 @@ struct Dev devfile =
 {
 	.dev_id =	'f',
 	.dev_name =	"file",
-	.dev_read =	devfile_read,
-	.dev_close =	devfile_flush,
-	.dev_stat =	devfile_stat,
-	.dev_write =	devfile_write,
-	.dev_trunc =	devfile_trunc
+	.dev_read =	 devfile_read,
+	.dev_close = devfile_flush,
+	.dev_stat =	 devfile_stat,
+	.dev_write = devfile_write,
+	.dev_trunc = devfile_trunc
 };
 
 // Open a file (or directory).
@@ -141,7 +141,11 @@ devfile_write(struct Fd *fd, const void *buf, size_t n)
 	// remember that write is always allowed to write *fewer*
 	// bytes than requested.
 	// LAB 5: Your code here
-	panic("devfile_write not implemented");
+	int r;
+	fsipcbuf.write.req_fileid = fd->fd_file.id;
+	fsipcbuf.write.req_n = n;
+	memmove(fsipcbuf.write.req_buf, buf, n);
+	return fsipc(FSREQ_WRITE, NULL);
 }
 
 static int

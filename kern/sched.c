@@ -30,7 +30,29 @@ sched_yield(void)
 	// below to halt the cpu.
 
 	// LAB 4: Your code here.
+	int start = 0;
+	int j;
 
+	if(curenv){
+		start = ENVX(curenv->env_id) + 1;
+	}
+
+	// 寻找新任务
+	for(int i = 0; i < NENV; i++){
+		j = (start + i) % NENV;
+		if(envs[j].env_status == ENV_RUNNABLE){
+			// cprintf("find new env \n");
+			env_run(&envs[j]);
+		}
+	}
+
+	// 当前任务是否执行完，没有则继续
+	if(curenv && curenv->env_status == ENV_RUNNING){
+		// cprintf("sched cur env \n");
+		env_run(curenv);
+	}
+
+	cprintf("CPU:%d  Sched_halt !!! \n", thiscpu->cpu_id);
 	// sched_halt never returns
 	sched_halt();
 }
@@ -45,16 +67,21 @@ sched_halt(void)
 
 	// For debugging and testing purposes, if there are no runnable
 	// environments in the system, then drop into the kernel monitor.
+	// 检查所有的环境，是否有 就绪态，运行态，阻塞态的环境
 	for (i = 0; i < NENV; i++) {
 		if ((envs[i].env_status == ENV_RUNNABLE ||
 		     envs[i].env_status == ENV_RUNNING ||
 		     envs[i].env_status == ENV_DYING))
 			break;
 	}
+
+	// 检查了所有环境都没有，进入monitor
 	if (i == NENV) {
 		cprintf("No runnable environments in the system!\n");
-		while (1)
-			monitor(NULL);
+		if(thiscpu->cpu_id == 0){
+			while (1)
+				monitor(NULL);					
+		}
 	}
 
 	// Mark that no environment is running on this CPU
@@ -76,7 +103,8 @@ sched_halt(void)
 		"pushl $0\n"
 		"pushl $0\n"
 		// Uncomment the following line after completing exercise 13
-		//"sti\n"
+		// 启用 CPU 中断
+		"sti\n"
 		"1:\n"
 		"hlt\n"
 		"jmp 1b\n"

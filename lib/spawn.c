@@ -104,13 +104,16 @@ spawn(const char *prog, const char **argv)
 	child = r;
 
 	// Set up trap frame, including initial stack.
+	// 设置子进程的EIP寄存器，即是程序入口
 	child_tf = envs[ENVX(child)].env_tf;
 	child_tf.tf_eip = elf->e_entry;
 
+	// 为子进程设置初始栈空间，并讲命令行参数 argv 放入子进程的栈中，设置tf_esp栈指针为栈的初始位置
 	if ((r = init_stack(child, argv, &child_tf.tf_esp)) < 0)
 		return r;
 
 	// Set up program segments as defined in ELF header.
+	// 根据elf信息，加载各个段到内存中，具体实现见 map_segment
 	ph = (struct Proghdr*) (elf_buf + elf->e_phoff);
 	for (i = 0; i < elf->e_phnum; i++, ph++) {
 		if (ph->p_type != ELF_PROG_LOAD)
@@ -122,17 +125,24 @@ spawn(const char *prog, const char **argv)
 				     fd, ph->p_filesz, ph->p_offset, perm)) < 0)
 			goto error;
 	}
+	// 文件都已经加载完成了，可以关掉fd描述符
 	close(fd);
 	fd = -1;
 
+
 	// Copy shared library state.
+	// 将当前环境的共享库状态复制到子进程中，以便它们可以共享相同的共享库。
 	if ((r = copy_shared_pages(child)) < 0)
 		panic("copy_shared_pages: %e", r);
 
+
+	// 设置子进程的 eflags，使它具有 I/O 操作权限（FL_IOPL_3）。
+	// 调用 sys_env_set_trapframe() 设置子进程的寄存器状态。
 	child_tf.tf_eflags |= FL_IOPL_3;   // devious: see user/faultio.c
 	if ((r = sys_env_set_trapframe(child, &child_tf)) < 0)
 		panic("sys_env_set_trapframe: %e", r);
 
+	//调用 sys_env_set_status() 将子进程的状态设为可运行（ENV_RUNNABLE），让它开始执行。
 	if ((r = sys_env_set_status(child, ENV_RUNNABLE)) < 0)
 		panic("sys_env_set_status: %e", r);
 
@@ -260,6 +270,8 @@ error:
 	return r;
 }
 
+
+// 先将elf指定的段位置，映射到父进程的UTMP位置，再让子进程的正确位置映射到UTMP，最后断开UTMP的映射
 static int
 map_segment(envid_t child, uintptr_t va, size_t memsz,
 	int fd, size_t filesz, off_t fileoffset, int perm)
@@ -302,6 +314,18 @@ static int
 copy_shared_pages(envid_t child)
 {
 	// LAB 5: Your code here.
+	uintptr_t addr;
+	for (addr = 0; addr < UTOP; addr += PGSIZE) {
+		if ((uvpd[PDX(addr)] & PTE_P) 
+			&& (uvpt[PGNUM(addr)] & PTE_P) 
+			&& (uvpt[PGNUM(addr)] & PTE_U) 
+			&& (uvpt[PGNUM(addr)] & PTE_SHARE)) 
+		{
+            sys_page_map(0, (void*)addr, child, (void*)addr, (uvpt[PGNUM(addr)] & PTE_SYSCALL));
+        }
+	}
+
+
 	return 0;
 }
 

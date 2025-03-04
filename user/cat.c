@@ -21,8 +21,10 @@ umain(int argc, char **argv)
 	int f, i;
 
 	binaryname = "cat";
+
 	if (argc == 1)
 		cat(0, "<stdin>");
+		
 	else
 		for (i = 1; i < argc; i++) {
 			f = open(argv[i], O_RDONLY);
