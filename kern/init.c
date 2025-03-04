@@ -31,7 +31,7 @@ i386_init(void)
 
 	// Lab 2 memory management initialization functions
 	// 根据mmu.h初始化内存结构，建立映射关系
-	// 设置cr0 和 cr3 启动分页机制
+	// 设置cr0 和 cr3 启动分页机制，相当于启动 CPU 的 MMU 映射
 	mem_init();
 
 
@@ -50,6 +50,7 @@ i386_init(void)
 	// 读取多核配置，写入cpu数组
 	mp_init();	
 
+	
 	// lapic (Local Advanced Programmable Interrupt Controller)
 	// 初始化本地APIC，使其能够正常工作。
 	lapic_init();
