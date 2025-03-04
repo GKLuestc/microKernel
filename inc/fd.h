@@ -31,9 +31,6 @@ struct FdFile {
 	int id;
 };
 
-struct FdSock {
-	int sockid;
-};
 
 struct FdSock {
 	int sockid;
