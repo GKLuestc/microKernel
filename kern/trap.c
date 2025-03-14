@@ -294,6 +294,12 @@ trap_dispatch(struct Trapframe *tf)
 	// LAB 4: Your code here.
 	if (tf->tf_trapno == IRQ_OFFSET + IRQ_TIMER) {
 		lapic_eoi();
+		// cprintf("tf->tf_trapno == IRQ_OFFSET + IRQ_TIMER??????\n");
+
+		// 只能有一个 cpu 去加这个全局变量，心跳数
+		if (cpunum() == 0) {				//lab6
+			time_tick();
+		}
 		sched_yield();
 		return;
 	}

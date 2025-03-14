@@ -508,7 +508,8 @@ static int
 sys_time_msec(void)
 {
 	// LAB 6: Your code here.
-	panic("sys_time_msec not implemented");
+	return time_msec();
+	// panic("sys_time_msec not implemented");
 }
 
 // Dispatches to the correct kernel function, passing the arguments.
@@ -601,6 +602,11 @@ syscall(uint32_t syscallno, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, 
 		// IPC 进程间通信，接收中断函数
 		case SYS_ipc_recv:
 			ret = sys_ipc_recv((void *)a1);
+			break;
+
+		// 返回当前时间
+		case SYS_time_msec:
+			ret = sys_time_msec();
 			break;
 
 		default:

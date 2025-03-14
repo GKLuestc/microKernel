@@ -42,7 +42,7 @@ void bootmain(void)
 	struct Proghdr *ph, *eph;
 	int i;
 
-	// 读取磁盘的第一个扇面 512 字节   read 1st page off disk
+	// 读取磁盘的第一个扇面开始 512*8 = 4K字节   read 1st page off disk
 	readseg((uint32_t) ELFHDR, SECTSIZE*8, 0);
 
 	// 检查是否为有效的 ELF 文件   is this a valid ELF?
